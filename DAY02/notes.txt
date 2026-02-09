@@ -458,7 +458,61 @@ kubectl apply -f quota.yaml
 
 
 
+NOTES FROM BLOG:
 
+Namespaces Provides
+
+1. Isolation
+
+• Namespaces keep resources separate so that workloads from different teams or environments don't interfere with each other.
+
+2. Access Control (RBAC)
+
+• You can set Role-Based Access Control (RBAC) policies to restrict access to certain namespaces.
+• Only authorized users or teams can view or manage resources in those namespaces.
+
+3. Resource Quotas
+
+• You can set CPU and memory limits for each namespace.
+• This stops any single team or application from using up all the cluster’s resources.
+
+4. Environment Segregation
+
+• Namespaces are perfect for keeping different environments apart, such as:
+• dev – Development environment
+• staging – Testing/pre-production environment
+• production – Live environment
+• Each environment gets its own namespace, keeping workloads and settings separate.
+
+
+
+Types of Namespaces in Kubernetes
+
+1. default
+
+○ Used when you don’t specify any namespace while creating a resource.
+○ All resources go here by default.
+
+2. kube-system
+
+○ Contains Kubernetes system components and internal services.
+○ Essential for cluster operation — avoid modifying resources here unless necessary.
+
+3. kube-public
+
+○ Stores resources that are accessible to everyone, including unauthenticated users.
+○ Commonly used for public information in the cluster.
+
+4. kube-node-lease
+
+○ Manages node lease objects that help in:
+▪ Tracking node health
+▪ Leader election in the cluster
+
+5. User-defined
+
+○ Custom namespaces created by users for organizing resources by teams, projects, or environments.
+○ Helps in keeping workloads isolated and well-managed.
 
 
 notes from chatgpt:
