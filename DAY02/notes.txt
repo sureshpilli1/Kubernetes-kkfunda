@@ -547,3 +547,78 @@ Swap can cause latency spikes
 
 Force apps to fail fast instead of slow swap
 
+
+
+
+
+
+
+
+
+
+1️⃣ What is iptables?
+
+iptables is the Linux firewall mechanism.
+
+It controls:
+
+Which network packets are allowed
+
+Which are blocked
+
+Which are modified or forwarded
+
+In simple words:
+
+iptables = traffic rules for your Linux system
+
+Every packet entering or leaving your server is checked against these rules.
+
+2️⃣ What does “adding iptables” mean?
+
+It means:
+
+Adding firewall rules to control network traffic
+
+Example:
+
+Allow SSH
+
+Block a malicious IP
+
+Allow only certain ports
+
+Forward traffic to containers
+
+So when someone says:
+
+“Add iptables”
+
+They usually mean:
+
+“Add firewall rules using iptables commands”
+
+Real-world meaning of “adding iptables” in DevOps
+
+Usually done for:
+
+🔹 Security hardening
+
+Allow only required ports
+
+Block unwanted access
+
+🔹 Docker / Kubernetes networking
+
+NAT rules for containers
+
+Port forwarding
+
+Pod-to-pod traffic
+
+(Important: Docker and Kubernetes automatically add iptables rules)
+
+Interview-ready one-liner
+
+Adding iptables means creating firewall rules in Linux to allow, block, or control network traffic at the kernel level.
+
