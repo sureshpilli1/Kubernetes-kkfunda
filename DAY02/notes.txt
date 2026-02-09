@@ -346,7 +346,8 @@ kubectl create ns testing-ns
 
 k8s nameSpaces
 ==============
-In Kubernetes, namespaces are a way to organize and manage resources within a cluster. They help you divide cluster resources between multiple users or teams and can be useful for managing resource quotas, network policies, and access control.
+In Kubernetes, namespaces are a way to organize and manage resources within a cluster.
+They help you divide cluster resources between multiple users or teams and can be useful for managing resource quotas, network policies, and access control.
 
 Here are some key commands and YAML examples related to Kubernetes namespaces:
 
