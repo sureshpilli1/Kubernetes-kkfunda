@@ -493,6 +493,54 @@ Swap causes unpredictable scheduling
 
 🔹 Performance-sensitive systems
 
+
+
+What are kernel settings?
+
+The kernel is the core of Linux.
+Kernel settings are runtime parameters that control how the kernel behaves.
+
+Examples:
+
+Memory management
+
+Networking
+
+File system limits
+
+Process handling
+
+Security features
+
+These settings are exposed via sysctl.
+
+What does “disabling a kernel setting” mean?
+
+It does NOT mean turning off the kernel ❌
+It means:
+
+Changing a kernel parameter to stop or restrict a specific behavior
+
+Simple analogy (easy to remember)
+
+Think of Linux kernel like a car engine ECU 🚗
+
+Kernel setting = engine tuning knob
+
+Disabling a setting = turning off a feature you don’t need
+
+Goal:
+
+Better mileage
+
+Stable driving
+
+No unexpected behavior
+
+8️⃣ Summary (interview-ready)
+
+Disabling kernel settings means modifying kernel parameters to stop or restrict certain default behaviors for better performance, security, predictability, or software compatibility. These changes are done using sysctl and are common in containerized and production systems.
+
 Swap can cause latency spikes
 
 🔹 Memory tuning
