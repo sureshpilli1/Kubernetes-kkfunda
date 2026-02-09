@@ -623,3 +623,62 @@ Interview-ready one-liner
 
 Adding iptables means creating firewall rules in Linux to allow, block, or control network traffic at the kernel level.
 
+
+
+
+
+What is a Docker GPG key?
+
+A Docker GPG key is a public cryptographic key used to verify that Docker packages are genuine and not tampered with.
+
+In simple terms:
+
+It’s Docker’s official “signature” that proves the software really comes from Docker and hasn’t been modified.
+
+2️⃣ Why does Docker use a GPG key?
+
+When you install Docker from its official repository (APT/YUM):
+
+Packages are signed by Docker
+
+Your system checks the signature
+
+Installation proceeds only if the signature matches
+
+This protects you from:
+
+❌ Fake or malicious packages
+
+❌ Man-in-the-middle attacks
+
+❌ Compromised mirrors
+
+So it’s about security + trust 🔐
+
+
+This does two things:
+
+Downloads Docker’s public GPG key
+
+Stores it in your system’s trusted keyring
+
+5️⃣ What happens after adding the key?
+
+When you run:
+
+apt update
+
+
+APT:
+
+Downloads Docker packages
+
+Verifies package signatures using the Docker GPG key
+
+Installs only if verification succeeds
+
+If the key is missing ❌:
+
+NO_PUBKEY error
+The following signatures couldn't be verified
+A Docker GPG key is a public cryptographic key used by the operating system to verify the authenticity and integrity of Docker packages before installation, ensuring they come from Docker and haven’t been altered.
