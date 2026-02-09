@@ -454,3 +454,48 @@ spec:
 
 kubectl apply -f quota.yaml
 
+
+
+
+
+
+
+notes from chatgpt:
+
+
+1️⃣ What is swap in Linux?
+
+Swap is disk space used as extra virtual memory when your RAM is full.
+
+Think of it like this:
+
+🧠 RAM → fast, expensive, limited
+
+💾 Disk (swap) → slow, cheap, larger
+
+When RAM is exhausted:
+
+Inactive memory pages are moved from RAM → swap
+
+This prevents the system from crashing due to Out Of Memory (OOM)
+
+
+
+Why do people disable swap?
+
+Common real-world reasons:
+
+🔹 Kubernetes / Docker
+
+Kubernetes requires swap OFF
+
+Swap causes unpredictable scheduling
+
+🔹 Performance-sensitive systems
+
+Swap can cause latency spikes
+
+🔹 Memory tuning
+
+Force apps to fail fast instead of slow swap
+
