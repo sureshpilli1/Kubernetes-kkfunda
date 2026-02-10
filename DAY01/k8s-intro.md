@@ -67,3 +67,12 @@ Kubernetes (often abbreviated as K8s) is an open-source container orchestration 
 - **kube-proxy**: Maintains network rules and handles communication to Pods
 - **Pods**: Smallest deployable units in Kubernetes; contain one or more containers
 - **CRI (Container Runtime Interface)**: Interface between kubelet and container runtime (e.g., containerd, Docker)
+
+
+notes from class:
+don't tell the current version of Kubernetes in interview. kk is using 21 version 
+IQ: how many nodes do you have in your project and their configuration prashanth has 70 servers for 50 microservices 
+which region has how many servers where are your customers are more
+
+scheduler user uses round Robin algorithm 
+EKS is service as platform provided by AWS
