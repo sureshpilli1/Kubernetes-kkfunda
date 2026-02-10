@@ -298,10 +298,724 @@ spec:
 
 
 
+NOTES FROM BLOG:
+
+1. Labels
+
+A label is just a key/value pair attached to a Kubernetes object (like Pod, Service, Deployment, etc.).
+
+Labels are used for categorization and organization.
+
+You can create your own labels and apply them to any object.
+
+Example:
+
+labels:
+  app: javawebapp
+  environment: production
+
+2. Selectors
+
+A selector is used to find objects by their labels.
+
+Services, ReplicaSets, and Deployments use selectors to decide which Pods they should work with.
+
+Example:
+
+selector:
+  app: javawebapp
+
+3. Why Are They Important?
+
+Labels and selectors are crucial for creating Services.
+
+They make sure traffic is routed to the right Pods. This way, Kubernetes knows which Pods should receive the traffic.
+
+Without labels, services cannot find Pods → traffic will break.
+
+By grouping Pods with labels, you can easily manage environments (dev, test, prod).
+
+Simple workflow:
+
+Add labels to Pods.
+
+Create a Service with a selector.
+
+Kubernetes automatically routes traffic from the Service → to the Pods with matching labels.
+
+4. How Do Labels Form Groups?
+
+Think of labels as group tags:
+
+If multiple Pods have app: javawebapp, they form one group.
+
+If some Pods have environment: production, they form the “production” group.
+
+This way you can create logical groups across your cluster.
+
+5. What If Labels Were Missing?
+
+No Service Creation → Services wouldn’t know which Pods to connect to.
+
+Broken Routing → Traffic wouldn’t reach the right Pods.
+
+Chaos → Hard to organize or manage different apps and environments.
+
+In short: labels are essential for Kubernetes to function smoothly.
+
+6. Creating Pods with Labels
+
+In Kubernetes, labels are key-value pairs attached to objects (like Pods). Labels help in organizing, selecting, and grouping resources.
+
+Let’s create two Pods — one Java web app Pod with a label and another Nginx Pod without a label.
+
+javawebapp.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: javawebapptest
+  namespace: test-ns
+  labels:
+    app: javawebapp    # This is the label we are creating
+spec:
+  containers:
+    - name: javawebapp1
+      image: kkeducationb2/java-webapp:1.1
+      ports:
+        - containerPort: 8080
 
 
+Here, you are creating a pod called javawebapptest in namespace test-ns with a label app: javawebapp
+
+Run:
+kubectl apply -f javawebapp.yaml --dry-run=client   # Check before apply
+kubectl apply -f javawebapp.yaml
+
+ubuntu@ip-172-31-31-186:~$ vi javawebapp.yaml
+ubuntu@ip-172-31-31-186:~$ kubectl apply -f javawebapp.yaml --dry-run=client
+pod/javawebapptest created (dry run)
+ubuntu@ip-172-31-31-186:~$ kubectl apply -f javawebapp.yaml
+pod/javawebapptest created
+ubuntu@ip-172-31-31-186:~$
+
+Check the pods
+kubectl get pods -n test-ns
+
+ubuntu@ip-172-31-31-186:~$ kubectl get pods -n test-ns
+NAME             READY   STATUS    RESTARTS   AGE
+javawebapptest   1/1     Running   0          24s
+ubuntu@ip-172-31-31-186:~$
+
+7. Create Another Pod
+mongo.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: mogodbpod
+  namespace: test-ns
+  labels:
+    app: mongo    # This is the label we are creating
+spec:
+  containers:
+    - name: mongodbcontainer
+      image: mongo
+      ports:
+        - containerPort: 27017
+
+Run:
+kubectl apply -f mongo.yaml
+
+ubuntu@ip-172-31-31-186:~$
+ubuntu@ip-172-31-31-186:~$ vi mongo.yaml
+ubuntu@ip-172-31-31-186:~$
+ubuntu@ip-172-31-31-186:~$ kubectl apply -f mongo.yaml
+pod/mogodbpod created
+ubuntu@ip-172-31-31-186:~$
+
+Check the pods
+ubuntu@ip-172-31-31-186:~$ kubectl get pods -n test-ns
+NAME             READY   STATUS    RESTARTS   AGE
+javawebapptest   1/1     Running   0          2m17s
+mogodbpod        1/1     Running   0          35s
+ubuntu@ip-172-31-31-186:~$
+
+8. Check Labels of Pods
+
+To see detailed labels:
+
+kubectl describe shows all details of a pod: labels, annotations, events, containers, etc. This is useful when troubleshooting or checking configuration.
+
+kubectl describe pod javawebapptest -n test-ns
+
+Name:           javawebapptest
+Namespace:      test-ns
+Priority:       0
+Service Account: default
+Node:           ip-172-31-25-213/172.31.25.213
+Start Time:     Mon, 18 Aug 2025 18:49:01 +0000
+Labels:         app=javawebapp
+Annotations:    <none>
+Status:         Running
+IP:             10.44.0.1
+IPs:
+  IP:           10.44.0.1
+Containers:
+  javawebapp1:
+    Container ID:   containerd://7e1ef09f2a0f69372dc2ed6be251cf0fb3e0c9027725d877d65a01338d8aa4a
+    Image:          kkeducationb2/java-webapp:1.1
+    Image ID:       docker.io/kkeducationb2/java-webapp@sha256:0691afd4f70f90926ddab61741fd228da0cdaf038b529ee2f4ff60763c2cff4e
+    Port:           8080/TCP
+    Host Port:      0/TCP
+    State:          Running
+    Started:        Mon, 18 Aug 2025 18:49:09 +0000
+    Ready:          True
+    Restart Count:  0
+    Environment:    <none>
+    Mounts:
+
+kubectl describe pod mogodbpod -n test-ns
+
+Name:           mogodbpod
+Namespace:      test-ns
+Priority:       0
+Service Account: default
+Node:           ip-172-31-29-133/172.31.29.133
+Start Time:     Mon, 18 Aug 2025 18:50:43 +0000
+Labels:         app=mongo
+Annotations:    <none>
+Status:         Running
+IP:             10.36.0.1
+IPs:
+  IP:           10.36.0.1
+Containers:
+  mongodbcontainer:
+    Container ID:   containerd://9cddaa816b8c1ed939866e80c4a6223fde7da2f3349606a256e8c6668ba25dea
+    Image:          mongo
+    Image ID:       docker.io/library/mongo@sha256:95a98776f273721a295b03098578b06bc10281bb56aa82c77e9f60ecc70b150
+    Port:           27017/TCP
+    Host Port:      0/TCP
+    State:          Running
+    Started:        Mon, 18 Aug 2025 18:51:03 +0000
+    Ready:          True
+    Restart Count:  0
+
+To see only labels:
+
+--show-labels shows just the labels in the table output (short and handy).
+
+kubectl get po -n test-ns --show-labels
+
+ubuntu@ip-172-31-31-186:~$ kubectl get po -n test-ns --show-labels
+NAME             READY   STATUS    RESTARTS   AGE    LABELS
+javawebapptest   1/1     Running   0          3m37s app=javawebapp
+mogodbpod        1/1     Running   0          115s  app=mongo
+ubuntu@ip-172-31-31-186:~$
+
+9. Check Pod IPs
+
+Get Pod IPs:
+
+kubectl get po -n test-ns -o wide
+
+ubuntu@ip-172-31-31-186:~$ kubectl get po -n test-ns -o wide
+NAME             READY   STATUS    RESTARTS   AGE    IP         NODE               NOMINATED NODE   READINESS GATES
+javawebapptest   1/1     Running   0          4m10s 10.44.0.1  ip-172-31-25-213   <none>           <none>
+mogodbpod        1/1     Running   0          2m28s 10.36.0.1  ip-172-31-29-133   <none>           <none>
+ubuntu@ip-172-31-31-186:~$
 
 
+This lists pods in the namespace with extra info like Pod IP, Node, and status.
+
+Pod IP is an internal cluster-only IP assigned by the Kubernetes network (CNI).
+
+You can use this Pod IP to test pod-to-pod communication.
+
+10. Verifying Pod-to-Pod Communication Ping from One Pod to Another
+
+Go inside javawebapp pod: ping to mongo pod with ip
+
+kubectl exec -it javawebapptest -n test-ns -- sh
+
+ubuntu@ip-172-31-31-186:~$ kubectl exec -it javawebapptest -n test-ns -- sh
+# ping 10.36.0.1
+sh: 2: ping: not found
+# apt-get update
+Get:1 http://security.ubuntu.com/ubuntu noble-security InRelease [126 kB]
+Get:2 http://archive.ubuntu.com/ubuntu noble InRelease [256 kB]
+Get:3 http://security.ubuntu.com/ubuntu noble-security/main amd64 Packages [1,340 kB]
+Get:4 http://security.ubuntu.com/ubuntu noble-security/multiverse amd64 Packages [23.0 kB]
+Get:5 http://security.ubuntu.com/ubuntu noble-security/universe amd64 Packages [1,135 kB]
+Get:6 http://security.ubuntu.com/ubuntu noble-security/restricted amd64 Packages [2,009 kB]
+Get:7 http://archive.ubuntu.com/ubuntu noble-updates InRelease [126 kB]
+Get:8 http://archive.ubuntu.com/ubuntu noble-backports InRelease [126 kB]
+Get:9 http://archive.ubuntu.com/ubuntu noble/restricted amd64 Packages [117 kB]
+Get:10 http://archive.ubuntu.com/ubuntu noble/main amd64 Packages [1,808 kB]
+Get:11 http://archive.ubuntu.com/ubuntu noble/universe amd64 Packages [19.3 MB]
+Get:12 http://archive.ubuntu.com/ubuntu noble/multiverse amd64 Packages [331 kB]
+Get:13 http://archive.ubuntu.com/ubuntu noble-updates/universe amd64 Packages [1,456 kB]
+Get:14 http://archive.ubuntu.com/ubuntu noble-updates/main amd64 Packages [1,692 kB]
+Get:15 http://archive.ubuntu.com/ubuntu noble-updates/multiverse amd64 Packages [45.2 kB]
+Get:16 http://archive.ubuntu.com/ubuntu noble-updates/restricted amd64 Packages [2,148 kB]
+Get:17 http://archive.ubuntu.com/ubuntu noble-backports/main amd64 Packages [48.8 kB]
+Get:18 http://archive.ubuntu.com/ubuntu noble-backports/universe amd64 Packages [35.6 kB]
+Fetched 32.1 MB in 3s (10.0 MB/s)
+Reading package lists... Done
+
+11. Install ping (if missing)
+
+If the container image doesn’t have ping:
+
+For Ubuntu/Debian-based image (most Java images use this):
+
+apt-get update
+apt-get install -y iputils-ping
+
+
+From inside, ping nginx pod IP:
+
+12. Ping MongoDB Pod
+
+Now run inside the pod:
+
+ping 10.136.0.1
+
+13. What happens when you ping
+
+The JavaWebApp pod sends ICMP packets over the Kubernetes overlay network (CNI plugin like Flannel/Calico).
+
+Packets are routed across nodes → reach the MongoDB pod’s IP.
+
+If successful, you’ll see:
+
+PING 10.36.0.1 (10.36.0.1) 56(84) bytes of data.
+64 bytes from 10.36.0.1: icmp_seq=1 ttl=64 time=1.14 ms
+64 bytes from 10.36.0.1: icmp_seq=2 ttl=64 time=0.354 ms
+64 bytes from 10.36.0.1: icmp_seq=3 ttl=64 time=0.345 ms
+64 bytes from 10.36.0.1: icmp_seq=4 ttl=64 time=0.351 ms
+64 bytes from 10.36.0.1: icmp_seq=5 ttl=64 time=0.321 ms
+
+
+You will see ICMP ping success → This means pods can talk with each other using Pod IPs.
+
+But Pod IPs are not stable → if pod restarts, IP will change. That’s why we need Services.
+
+Now delete everything and start fresh.
+
+ubuntu@ip-172-31-31-186:~$ ls
+javawebapp.yaml  mongo.yaml  this-is-Master
+ubuntu@ip-172-31-31-186:~$ kubectl delete -f javawebapp.yaml
+pod "javawebapptest" deleted
+ubuntu@ip-172-31-31-186:~$ kubectl delete -f mongo.yaml
+pod "mogodbpod" deleted
+ubuntu@ip-172-31-31-186:~$
+
+14. Why Service is Needed?
+
+Pods are ephemeral → Pod IP changes when pod restarts.
+
+Service gives a stable DNS name + virtual IP to access pods.
+
+Service can also load balance traffic across multiple pods with same label.
+
+15. Service in Kubernetes
+
+A Service in Kubernetes provides a stable way for communication between Pods, ensuring availability and proper traffic routing. Since Pods are dynamic (they can restart and change IPs), Services act as a stable entry point.
+
+16. Why Services Need Labels
+
+Labels are key-value pairs attached to Pods.
+
+A Service uses selectors to find which Pods it should route traffic to.
+
+Without labels, Services cannot identify Pods.
+
+Kubernetes automatically creates an Endpoint object for each Service, storing the IP addresses and ports of the matching Pods.
+
+17. Endpoints
+
+Endpoints contain network information (Pod IPs + Ports).
+
+They ensure that traffic from the Service is always routed to the correct Pods.
+
+If Pods change, Endpoints are updated automatically.
+
+18. Types of Kubernetes Services
+
+ClusterIP
+
+NodePort
+
+LoadBalancer
+
+ExternalName
+
+1. ClusterIP Service (Default)
+
+Default and most common service type.
+
+Kubernetes assigns a cluster-internal IP address to the Service.
+
+Accessible only within the cluster.
+
+Optional: you can set clusterIP in the service YAML.
+
+Not accessible from outside the cluster unless exposed with NodePort/LoadBalancer/Ingress.
+
+Flow:
+
+Pod → Label → Service → Endpoint → Traffic Routing
+
+Example: Java Web App Pod + Service
+
+Here’s the YAML: javawebapp-service.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: javawebapptest
+  namespace: test-ns
+  labels:
+    app: javawebapp    # Label added here
+spec:
+  containers:
+    - name: javawebapp1
+      image: kkeducationb2/java-webapp:1.1
+      ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: javawebapp-service
+  namespace: test-ns
+spec:
+  selector:              # Service will target pods with this label
+    app: javawebapp      # must match the pod label
+  ports:
+    - protocol: TCP
+      port: 8080         # Service port (cluster-internal)
+      targetPort: 8080   # Container port inside the pod
+  type: ClusterIP        # Default
+
+
+Pod: Runs your Java Web App on container port 8080.
+
+Has a label: app: javawebapp.
+
+Service:
+
+Type is ClusterIP → internal-only (accessible inside cluster).
+
+Uses a selector (app: javawebapp) to forward traffic to the matching Pod.
+
+Exposes port 8080 inside the cluster and forwards to the container’s port 8080.
+
+Step 1: Apply the Pod + Service
+kubectl apply -f javawebapp-service.yaml
+
+ubuntu@ip-172-31-31-186:~$ vi javawebapp-service.yaml
+ubuntu@ip-172-31-31-186:~$ kubectl apply -f javawebapp-service.yaml
+pod/javawebapptest created
+service/javawebapp-service created
+ubuntu@ip-172-31-31-186:~$
+
+This creates:
+
+Pod: javawebapptest running your Java Web App (port 8080).
+
+Service: javawebapp-service (type: ClusterIP) that selects pods with app=javawebapp label.
+
+Step 2: Check Pods & Check All Resources
+kubectl get pods -n test-ns
+
+NAME             READY   STATUS    RESTARTS   AGE
+javawebapptest   1/1     Running   0          37s
+
+kubectl get all -n test-ns
+
+NAME                   READY   STATUS    RESTARTS   AGE
+pod/javawebapptest     1/1     Running   0          62s
+
+NAME                         TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
+service/javawebapp-service   ClusterIP   10.108.152.189   <none>        8080/TCP   62s
+
+
+Service will only route traffic to ready pods.
+
+If not ready, Service will exist but no endpoints will be available.
+
+You see both the Pod and Service.
+
+CLUSTER-IP is the stable internal IP of the Service.
+
+EXTERNAL-IP is <none> because ClusterIP is not exposed outside cluster.
+
+Port mapping shows Service listens on 8080 and forwards to Pod’s 8080.
+
+Step 3: Verify the Service
+kubectl get svc -n test-ns
+
+ubuntu@ip-172-31-31-186:~$ kubectl get svc -n test-ns
+NAME                 TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)     AGE
+javawebapp-service   ClusterIP   10.108.152.189   <none>        8080/TCP    83s
+ubuntu@ip-172-31-31-186:~$
+
+
+CLUSTER-IP → internal IP assigned to the service (reachable only inside the cluster).
+
+PORT(S) → service port 8080 forwards to pod containerPort 8080.
+
+Step 4: Check Service Details
+
+Describe Service
+
+kubectl describe svc javawebapp-service -n test-ns
+
+Name:                     javawebapp-service
+Namespace:                test-ns
+Labels:                   <none>
+Annotations:              <none>
+Selector:                 app=javawebapp
+Type:                     ClusterIP
+IP Family Policy:         SingleStack
+IP Families:              IPv4
+IP:                       10.108.152.189
+IPs:                      10.108.152.189
+Port:                     <unset> 8080/TCP
+TargetPort:               8080/TCP
+Endpoints:                10.44.0.1:8080
+Session Affinity:         None
+Internal Traffic Policy:  Cluster
+Events:                   <none>
+
+kubectl get pods -n test-ns -o wide
+
+NAME             READY   STATUS    RESTARTS   AGE    IP         NODE               NOMINATED NODE   READINESS GATES
+javawebapptest   1/1     Running   0          2m30s 10.44.0.1  ip-172-31-25-213   <none>           <none>
+
+
+Selector: app=javawebapp → matches pods with this label.
+
+Port: Service’s exposed port (8080).
+
+Endpoints: Pod IP(s) that this Service routes to (e.g. 10.44.0.1:8080).
+
+Verify Pod IP
+
+kubectl get pods -n test-ns -o wide
+
+
+Endpoints → point to the Pod IP(s) (from kubectl get pods -o wide).
+
+Matches the Endpoints IP (10.44.0.1).
+
+This confirms that traffic routing is correct:
+
+Service (ClusterIP) → Endpoint (Pod IP) → Container Port
+
+Step 5: Directly Get Endpoints
+
+Get Endpoints for a Particular Service
+
+kubectl get ep javawebapp-service -n test-ns
+
+
+Get All Endpoints in a Namespace
+
+kubectl get ep -n test-ns
+
+ubuntu@ip-172-31-31-186:~$ kubectl get ep javawebapp-service -n test-ns
+NAME                 ENDPOINTS         AGE
+javawebapp-service   10.44.0.1:8080    5m25s
+
+ubuntu@ip-172-31-31-186:~$ kubectl get ep -n test-ns
+NAME                 ENDPOINTS         AGE
+javawebapp-service   10.44.0.1:8080    5m38s
+ubuntu@ip-172-31-31-186:~$
+
+
+Shows the list of Pod IPs the Service will forward to.
+
+If multiple replicas exist, you’ll see multiple IPs here (load balancing).
+
+If ENDPOINTS is empty → Service exists, but no matching pods are ready.
+
+Final Flow Recap
+Pod (label: app=javawebapp ---> Service (ClusterIP, selects label) ---> Endpoint
+(resolves Pod IPs) ---> Traffic gets routed internally
+
+2. NodePort
+
+Exposes the Service on a static port (range: 30000–32767) on each node’s IP.
+
+Useful for basic external access (but not ideal for production).
+
+Extension of ClusterIP.
+
+Accessible using <NodeIP>:<NodePort>.
+
+Each Node proxies the traffic to the Service → Pods.
+
+Use Cases
+
+When you want external connectivity without cloud load balancer.
+
+Useful for testing / small setups.
+
+Can put your own load balancer above the nodes.
+
+Example: Java Web App Pod + NodePort Service
+apiVersion: v1
+kind: Pod
+metadata:
+  name: javawebapp-nodeport
+  namespace: test-ns
+  labels:
+    app: java
+spec:
+  containers:
+    - name: javawebapp1
+      image: kkeducationb2/java-webapp:1.1
+      ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: javawebapp-nodeport-service
+  namespace: test-ns
+spec:
+  selector:
+    app: java        # Must match Pod label
+  ports:
+    - port: 8080     # ClusterIP service port
+      targetPort: 8080   # Pod container port
+      nodePort: 30080    # NodePort (must be 30000–32767 if specified)
+  type: NodePort
+
+Relationship Between Label & Selector
+
+Pod label = app: java
+
+Service selector = app: java
+
+Because they match, the Service discovers the Pod and creates an Endpoint to forward traffic.
+
+Apply
+kubectl apply -f javawebapp-nodeport.yaml
+
+Verify Service
+kubectl get svc -n test-ns
+
+NAME                          TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)              AGE
+javawebapp-nodeport-service   NodePort    10.99.54.230   <none>        8080:30080/TCP       14m
+javawebapp-service            ClusterIP   10.97.255.35   <none>        8080/TCP             22m
+
+
+8080 → ClusterIP port (inside cluster)
+
+30080 → NodePort (exposed externally on all nodes)
+
+Service Description
+kubectl describe svc javawebapp-nodeport-service -n test-ns
+
+Name:                     javawebapp-nodeport-service
+Namespace:                test-ns
+Labels:                   <none>
+Annotations:              <none>
+Selector:                 app=java
+Type:                     NodePort
+IP Family Policy:         SingleStack
+IP Families:              IPv4
+IP:                       10.99.54.230
+IPs:                      10.99.54.230
+Port:                     <unset> 8080/TCP
+TargetPort:               8080/TCP
+NodePort:                 <unset> 30080/TCP
+Endpoints:                10.36.0.1:8080
+Session Affinity:         None
+Internal Traffic Policy:  Cluster
+Events:                   <none>
+
+kubectl get pods -n test-ns -o wide
+
+NAME                   READY   STATUS    RESTARTS   AGE    IP         NODE               NOMINATED NODE   READINESS GATES
+javawebapp-nodeport    1/1     Running   0          16m    10.36.0.1  ip-172-31-29-133   <none>           <none>
+javawebapptest         1/1     Running   0          24m    10.44.0.1  ip-172-31-25-213   <none>           <none>
+
+Type: NodePort → confirms external exposure.
+
+ClusterIP: 10.99.54.230 (internal access within the cluster).
+
+Port: 8080/TCP (service port inside cluster).
+
+TargetPort: 8080/TCP (container port inside Pod).
+
+NodePort: 30080/TCP (external port on worker nodes).
+
+Endpoints: 10.36.0.1:8080 → This shows the Pod’s internal IP (10.36.0.1) and the container port (8080) where the Service is actually forwarding traffic. So whenever you hit the Service
+(NodeIP:30080), Kubernetes routes the request internally to:
+
+Pod IP: 10.36.0.1
+Port:  8080 (containerPort)
+
+
+In short: Endpoint = the actual Pod + port that receives the traffic.
+
+NodePort Service Traffic Flow (with Labels & Selectors)
+Client (outside cluster)
+   ↓
+# Example: EC2-Public-IP:30080
+   ↓
+Node → forwards request to NodePort Service
+   ↓
+Service (selector: app=java)
+   ↓
+Finds Pods with label app=java
+   ↓
+Resolves to Pod IP(s) via Endpoints
+   ↓
+Traffic routed to Pod containerPort (8080)
+   ↓
+Java Web App responds back to client
+
+Test Access (NodePort Service)
+
+Once the Pod + Service are applied and running:
+
+Get your Node’s Public IP (for example, EC2 instance public IP).
+
+http://<NodeIP>:30080
+
+3. LoadBalancer
+
+Extension of NodePort.
+
+Integrates with cloud provider’s load balancer (AWS ELB, GCP LB, Azure LB).
+
+Exposes service to the internet with public IP.
+
+Mostly used in production deployments.
+
+The cloud load balancer automatically routes traffic → Service → Pods.
+
+Use Cases
+
+Production-grade external exposure.
+
+When running Kubernetes on cloud providers.
+
+4. ExternalName
+
+Maps a Service to an external DNS name instead of Pod IPs.
+
+No selectors, no proxying.
+
+Returns a CNAME record to redirect traffic.
+
+Use Cases
+
+Connect Kubernetes Pods to external databases/services.
 
 
 
