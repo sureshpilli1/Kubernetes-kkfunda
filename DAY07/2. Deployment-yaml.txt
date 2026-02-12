@@ -152,5 +152,852 @@ kubectl rollout undo deployment javawebappdep -n test-ns --to-revision 1
 
 
 
+BLOG NOTES:
+1. Introduction
+
+Kubernetes has changed the way we run and manage container-based applications. One of its most important features is the Deployment object. A Deployment takes care of creating and managing Pods for you, so your app is always available, scalable, and easy to update.
+
+Instead of manually starting or stopping Pods, you just tell Kubernetes what you want (the desired state), and the Deployment makes it happen. Whether you need to release a new version or handle more traffic, Deployments make the process smooth and automatic.
+
+2. What is a Deployment?
+
+Deployments are the backbone of Kubernetes applications.
+They manage the lifecycle of Pods and provide features like scaling, rolling updates, and rollback.
+
+When you define and use a Deployment:
+
+The Deployment automatically creates a ReplicaSet in the background.
+
+ReplicaSet Management
+
+The ReplicaSet ensures that the desired number of Pods are running at all times.
+
+The ReplicaSet creates and manages Pods.
+
+Inside each Pod, there can be one or more containers running your application.
+
+Flow: Deployment → ReplicaSets (RS) → Pods → Containers
+
+Self-Healing in Deployments
+
+Kubernetes automatically replaces failed or unhealthy Pods to maintain the desired state.
+
+The controllerManager constantly watches the Pods and recreates them if they fail.
+
+Once the Kubernetes Deployment is set up, the only manual task is updating the configuration (such as changing the container image version or adjusting replica counts).
+
+After that, Kubernetes handles everything else automatically:
+
+It will roll out the update by gradually replacing old Pods with new ones.
+
+If an update causes issues, Kubernetes can automatically roll back to the previous version without manual intervention.
+
+3. Key Features of Deployments:
+
+Replica Management → Ensures the specified number of Pods are always running.
+
+Rolling Updates → Updates applications gradually with minimal or no downtime.
+
+Rollback Capability → Easily revert to a previous version if a rollout fails.
+
+Declarative Scaling → Adjust the number of replicas by changing a single field in the YAML.
+
+4. Deployment Strategies in Kubernetes
+
+When you release a new version of your application, Kubernetes provides different strategies to control how Pods are updated. The two main strategies are Recreate and RollingUpdate.
+
+1. Recreate Strategy
+
+In this strategy, all the old Pods are terminated first, and then new Pods are created with the updated version.
+
+This means there will be downtime during the update because, for a short period, no Pods are available to serve requests.
+
+When to use Recreate?
+
+When downtime is acceptable.
+
+When running two versions of the app at the same time could cause conflicts (for example, database schema changes).
+
+Example flow:
+
+Step 1: Existing Pods → [v1][v1][v1]
+Step 2: Delete all Pods
+Step 3: Start new Pods → [v2][v2][v2]
+
+Let’s see the example:
+
+apiVersion: apps/v1          # We are creating a Deployment object
+kind: Deployment
+metadata:
+  name: javawebappdep        # Deployment name
+  namespace: test-ns         # Namespace where Deployment will run
+spec:
+  replicas: 2                # Number of Pods
+  strategy:
+    type: Recreate           # Update strategy → Recreate
+  selector:
+    matchLabels:
+      app: javawebapp        # Select Pods with this label
+  template:
+    metadata:
+      name: javawebapp
+      labels:
+        app: javawebapp      # Labels for Pods
+    spec:
+      containers:
+        - name: javawebapp
+          image: kkeducation12345/spring-app:1.0.0   # Container image version
+          ports:
+            - containerPort: 8080   # Expose 8080 inside Pod
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: javawebappsvc
+  namespace: test-ns
+spec:
+  type: NodePort             # Service type → NodePort
+  selector:
+    app: javawebapp          # Select Pods with label 'javawebapp'
+  ports:
+    - port: 80               # Service Port
+      targetPort: 8080       # Pod Port
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: javawebappdep
+  namespace: test-ns
+spec:
+  replicas: 3
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: javawebapp
+  template:
+    metadata:
+      name: javawebapp
+      labels:
+        app: javawebapp
+    spec:
+      containers:
+        - name: javawebapp
+          image: kkeducation12345/spring-app:1.0.0
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: javawebappsvc
+  namespace: test-ns
+spec:
+  type: NodePort
+  selector:
+    app: javawebapp
+  ports:
+    - port: 80
+      targetPort: 8080
+
+
+Step 1: Apply Deployment
+Step 1: Apply Deployment
+kubectl apply -f deploy.yaml
+
+deployment.apps/javawebappdeploy created
+service/javawebappsvc created
+
+
+Creates Deployment, ReplicaSet, Pods, Service.
+
+kubectl get all -n test-ns
+
+
+Shows all resources (Pods with image 1.0.0).
+
+NAME                                         READY   STATUS    RESTARTS   AGE
+pod/javawebappdeploy-5946c6f494-2msdx        1/1     Running   0          13s
+pod/javawebappdeploy-5946c6f494-m9rcm        1/1     Running   0          13s
+pod/javawebappdeploy-5946c6f494-wpmjf        1/1     Running   0          13s
+
+NAME                       TYPE       CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+service/javawebappsvc      NodePort   10.101.69.55   <none>        80:31567/TCP   13s
+
+NAME                                 READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/javawebappdeploy     3/3     3            3           13s
+
+NAME                                              DESIRED   CURRENT   READY   AGE
+replicaset.apps/javawebappdeploy-5946c6f494       3         3         3       13s
+
+
+3 Pods are running:
+pod/javawebappdeploy-5946c6f494-2msdx,
+pod/javawebappdeploy-5946c6f494-m9rcm,
+pod/javawebappdeploy-5946c6f494-wpmjf
+
+These are the actual application containers running.
+
+All 3 are Running with 1/1 status → means container inside Pod is ready.
+
+Deployment section
+
+Deployment name: javawebappdeploy
+
+READY: 3/3 → 3 Pods running successfully.
+
+UP-TO-DATE: 3 → all Pods updated with correct image.
+
+AVAILABLE: 3 → all 3 are available to serve traffic.
+
+Deployment is the manager here. It takes care of Pods through ReplicaSet.
+
+ReplicaSet section
+
+ReplicaSet created: javawebappdeploy-5946c6f494
+
+DESIRED = 3 → Deployment asked for 3 Pods.
+
+CURRENT = 3 → 3 Pods are running now.
+
+READY = 3 → all 3 are ready to accept traffic.
+
+ReplicaSet is the one that actually maintains the Pod count.
+
+Deployment controls the ReplicaSet, ReplicaSet controls the Pods.
+
+So, as you can see:
+
+Deployment → creates ReplicaSet.
+
+ReplicaSet → ensures correct number of Pods (Desired = Current = Ready).
+
+That’s why you see 3 Pods running under this ReplicaSet.
+
+Checking Rollout Status
+kubectl rollout status deployment javawebappdep -n test-ns
+
+deployment "javawebappdeploy" successfully rolled out
+
+Step 2: Update to Version 1.0.1
+
+Whenever you update the Deployment with a new image tag, Kubernetes automatically creates a new revision and associates it with a ReplicaSet.
+
+Change YAML image to:
+
+image: kkeducation12345/spring-app:1.0.1
+
+kubectl apply -f deploy.yaml
+
+deployment.apps/javawebappdeploy configured
+service/javawebappsvc unchanged
+
+kubectl get all -n test-ns
+
+NAME                                         READY   STATUS    RESTARTS   AGE
+pod/javawebappdeploy-6549568847-fcbb7        1/1     Running   0          3s
+pod/javawebappdeploy-6549568847-pm6kb        1/1     Running   0          3s
+pod/javawebappdeploy-6549568847-xbjvb        1/1     Running   0          3s
+
+NAME                       TYPE       CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+service/javawebappsvc      NodePort   10.101.69.55   <none>        80:31567/TCP   6m57s
+
+NAME                                 READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/javawebappdeploy     3/3     3            3           6m57s
+
+NAME                                              DESIRED   CURRENT   READY   AGE
+replicaset.apps/javawebappdeploy-5946c6f494       0         0         0       6m57s
+replicaset.apps/javawebappdeploy-6549568847       3         3         3       3s
+
+
+Because strategy is Recreate:
+
+Old Pods all deleted first.
+
+New Pods created with version 1.0.1.
+
+For some seconds → downtime happened (no Pods running).
+
+1. Pods Section
+
+All Pods age is 3s.
+
+This means → old Pods were terminated, and completely new Pods started.
+
+New Pods belong to the new ReplicaSet created.
+
+2. Deployment Section (middle red underline)
+
+Deployment javawebappdeploy still same.
+
+It now points to the new ReplicaSet (with new image).
+
+READY 3/3 → new Pods are successfully running.
+
+3. ReplicaSet Section (bottom red + green underline)
+
+Old ReplicaSet: javawebappdeploy-5946c6f494
+
+Desired = 0, Current = 0, Ready = 0 → all old Pods deleted.
+
+Age = 6m57s → created earlier when v1.0.0 was deployed.
+
+New ReplicaSet: javawebappdeploy-6549568847
+
+Desired = 3, Current = 3, Ready = 3 → managing the new Pods.
+
+Age = 3s → fresh, created for version 1.0.1 rollout.
+
+This clearly shows old ReplicaSet scaled down to 0, and new ReplicaSet scaled up to 3.
+
+Step 3: Checking Deployment Rollout History
+
+Each time you update Deployment image, Kubernetes creates a new ReplicaSet and assigns it a new revision number.
+
+By checking rollout history with --revision, you can confirm:
+
+Which version (image tag) was deployed.
+
+What configuration was applied.
+
+This way, you map revisions to exact images.
+
+At any time, you can check with:
+
+Checking Deployment Rollout History (Revision 1)
+kubectl rollout history deployment javawebappdep -n test-ns --revision 2
+
+deployment.apps/javawebappdeploy with revision #2
+Pod Template:
+  Labels:       app=javawebapp
+                pod-template-hash=6549568847
+  Containers:
+    javawebappcon:
+      Image:     kkeducation12345/spring-app:1.0.1
+      Port:      8080/TCP
+      Host Port: 0/TCP
+  Environment:   <none>
+  Mounts:        <none>
+  Volumes:       <none>
+  Node-Selectors:<none>
+  Tolerations:   <none>
+
+Step 4: Update Deployment to Version 1.0.2
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: javawebappdep
+  namespace: test-ns
+spec:
+  replicas: 3
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: javawebapp
+  template:
+    metadata:
+      name: javawebapp
+      labels:
+        app: javawebapp
+    spec:
+      containers:
+        - name: javawebapp
+          image: kkeducation12345/spring-app:1.0.2
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: javawebappsvc
+  namespace: test-ns
+spec:
+  type: NodePort
+  selector:
+    app: javawebapp
+  ports:
+    - port: 80
+      targetPort: 8080
+
+kubectl apply -f deploy.yaml
+
+deployment.apps/javawebappdeploy configured
+service/javawebappsvc unchanged
+
+kubectl get all -n test-ns
+
+NAME                                         READY   STATUS              RESTARTS   AGE
+pod/javawebappdeploy-f65598948-5pb29         0/1     ContainerCreating   0          1s
+pod/javawebappdeploy-f65598948-7rkh5         0/1     ContainerCreating   0          1s
+pod/javawebappdeploy-f65598948-7sqv5         0/1     ContainerCreating   0          1s
+
+NAME                       TYPE       CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+service/javawebappsvc      NodePort   10.101.69.55   <none>        80:31567/TCP   10m
+
+NAME                                 READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/javawebappdeploy     0/3     3            0           10m
+
+NAME                                              DESIRED   CURRENT   READY   AGE
+replicaset.apps/javawebappdeploy-5946c6f494       0         0         0       10m
+replicaset.apps/javawebappdeploy-6549568847       0         0         0       3m51s
+replicaset.apps/javawebappdeploy-f65598948        3         3         0       1s
+
+
+Old Pods from ReplicaSet 6549568847 (v1.0.1) were deleted.
+
+New Pods created from ReplicaSet f65598948 (v1.0.2).
+
+You can clearly see:
+
+ReplicaSet 5946c6f494 (v1.0.0) → 0 Pods.
+
+ReplicaSet 6549568847 (v1.0.1) → 0 Pods.
+
+ReplicaSet f65598948 (v1.0.2) → 3 Pods running (ContainerCreating → then Running).
+
+Step 5: Update to Version 1.0.3
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: javawebappdep
+  namespace: test-ns
+spec:
+  replicas: 3
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: javawebapp
+  template:
+    metadata:
+      name: javawebapp
+      labels:
+        app: javawebapp
+    spec:
+      containers:
+        - name: javawebapp
+          image: kkeducation12345/spring-app:1.0.3
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: javawebappsvc
+  namespace: test-ns
+spec:
+  type: NodePort
+  selector:
+    app: javawebapp
+  ports:
+    - port: 80
+      targetPort: 8080
+
+kubectl apply -f deploy.yaml
+
+Check Rollout Progress (Live Status)
+kubectl rollout status deployment javawebappdeploy -n test-ns
+
+Waiting for deployment "javawebappdeploy" rollout to finish: 0 of 3 updated replicas are available
+Waiting for deployment "javawebappdeploy" rollout to finish: 1 of 3 updated replicas are available
+Waiting for deployment "javawebappdeploy" rollout to finish: 2 of 3 updated replicas are available
+deployment "javawebappdeploy" successfully rolled out
+
+deployment "javawebappdeploy" successfully rolled out
+
+What the Output Shows:
+
+At first:
+
+0 of 3 updated replicas are available
+
+
+Means all old Pods are gone, but new Pods not yet running → downtime.
+
+Next:
+
+1 of 3 updated replicas are available
+2 of 3 updated replicas are available
+
+
+Slowly new Pods are starting, but still service impact continues (only partial availability).
+
+Finally:
+
+deployment "javawebappdeploy" successfully rolled out
+
+
+All 3 Pods are up and running with the new version → rollout completed.
+
+kubectl get all -n test-ns
+
+NAME                                         READY   STATUS    RESTARTS   AGE
+pod/javawebappdeploy-fd646865c-26skv         1/1     Running   0          101s
+pod/javawebappdeploy-fd646865c-529nz         1/1     Running   0          101s
+pod/javawebappdeploy-fd646865c-t1ccm         1/1     Running   0          101s
+
+NAME                       TYPE       CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+service/javawebappsvc      NodePort   10.101.69.55   <none>        80:31567/TCP   16m
+
+NAME                                 READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/javawebappdeploy     3/3     3            3           16m
+
+NAME                                              DESIRED   CURRENT   READY   AGE
+replicaset.apps/javawebappdeploy-5946c6f494       0         0         0       16m
+replicaset.apps/javawebappdeploy-6549568847       0         0         0       9m25s
+replicaset.apps/javawebappdeploy-f65598948        0         0         0       5m35s
+replicaset.apps/javawebappdeploy-fd646865c        3         3         3       102s
+
+
+ReplicaSets are created whenever you update a Deployment.
+
+Old ReplicaSets:
+
+5946c6f494 → scaled down (0 Pods, 16m old).
+
+6549568847 → scaled down (0 Pods, 9m old).
+
+f65598948 → scaled down (0 Pods, 5m old).
+
+Current ReplicaSet:
+
+fd646865c → 3 Pods running (latest version 1.0.3).
+
+Current ReplicaSet:
+
+
+fd646865c → running 3 Pods, created 102 seconds ago.
+
+
+This proves that your Deployment went through multiple rollouts (updates), and the latest ReplicaSet is currently active.
+
+
+
+
+
+Step 6: Kubernetes Deployment Rollout History and Rollback
+When you work with Kubernetes Deployments, every update creates a new revision. Kubernetes keeps track of these revisions so that you can roll back to a stable state if needed.
+Let’s walk through an example with a Deployment named javawebappdeploy running in the namespace test-ns.
+
+1. Checking Deployment Rollout History
+To see the revision history:
+kubectl rollout history deployment javawebappdeploy -n test-ns
+
+
+
+Each update creates a revision number. The CHANGE-CAUSE column is empty because we didn’t provide --record or annotate with a cause message.
+
+
+deployment.apps/javawebappdeploy
+REVISION  CHANGE-CAUSE
+1         <none>
+2         <none>
+3         <none>
+4         <none>
+
+
+2. Verifying Current Deployment State
+Check all resources in the namespace:
+kubectl get all -n test-ns
+
+NAME                                         READY   STATUS    RESTARTS   AGE
+pod/javawebappdeploy-fd646865c-26skv         1/1     Running   0          101s
+pod/javawebappdeploy-fd646865c-529nz         1/1     Running   0          101s
+pod/javawebappdeploy-fd646865c-t1ccm         1/1     Running   0          101s
+
+NAME                       TYPE       CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+service/javawebappsvc      NodePort   10.101.69.55   <none>        80:31567/TCP   16m
+
+NAME                                 READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/javawebappdeploy     3/3     3            3           16m
+
+NAME                                              DESIRED   CURRENT   READY   AGE
+replicaset.apps/javawebappdeploy-5946c6f494       0         0         0       16m
+replicaset.apps/javawebappdeploy-6549568847       0         0         0       9m25s
+replicaset.apps/javawebappdeploy-f65598948        0         0         0       5m35s
+replicaset.apps/javawebappdeploy-fd646865c        3         3         3       102s
+
+
+
+Here, the active ReplicaSet is fd646865c (newest one), with 3 Pods running.
+
+
+Older ReplicaSets (5946c6f494, 6549568847, f65598948) are all scaled down to 0 Pods.
+
+
+
+3. Performing Rollback
+Now, if we run:
+kubectl rollout undo deployment javawebappdeploy -n test-ns --to-revision=3
+
+Kubernetes will:
+
+
+Scale down the current active ReplicaSet (fd646865c) from 3 Pods → 0 Pods
+
+
+Scale up the older ReplicaSet (Revision 3’s ReplicaSet, e.g. f65598948) from 0 Pods → 3 Pods
+
+
+deployment.apps/javawebappdeploy rolled back
+
+
+4. After Rollback
+Running kubectl get all -n test-ns after rollback:
+NAME                                         READY   STATUS    RESTARTS   AGE
+pod/javawebappdeploy-f65598948-7f6pt         1/1     Running   0          7s
+pod/javawebappdeploy-f65598948-kpg1m         1/1     Running   0          7s
+pod/javawebappdeploy-f65598948-pmqwk         1/1     Running   0          7s
+
+NAME                       TYPE       CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+service/javawebappsvc      NodePort   10.101.69.55   <none>        80:31567/TCP   27m
+
+NAME                                 READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/javawebappdeploy     3/3     3            3           27m
+
+NAME                                              DESIRED   CURRENT   READY   AGE
+replicaset.apps/javawebappdeploy-5946c6f494       0         0         0       27m
+replicaset.apps/javawebappdeploy-6549568847       0         0         0       22m
+replicaset.apps/javawebappdeploy-f65598948        3         3         3       16m
+replicaset.apps/javawebappdeploy-fd646865c        0         0         0       12m
+
+
+
+Now the active ReplicaSet is back to f65598948, with 3 running Pods.
+
+
+The (fd646865c) has been scaled down to 0.
+
+
+
+5. Revision Numbers Keep Increasing
+If you check history again:
+kubectl rollout history deploy javawebappdeploy -n test-ns
+
+deployment.apps/javawebappdeploy
+REVISION  CHANGE-CAUSE
+2         <none>
+4         <none>
+5         <none>
+6         <none>
+
+
+
+Even though we rolled back to Revision 3, Kubernetes assigns a new revision number (5) to that rollback.
+
+
+That’s why you no longer see 3 in the list — it has effectively been replayed as 5.
+
+
+
+6. Key Behavior of Kubernetes Revisions
+
+
+Numbers always increase: Even if you roll back, Kubernetes will bump the revision counter.
+
+
+Old revision disappears: When you roll back to 1, that rollback is logged as a new revision 5.
+
+
+So the history shows 5 instead of 3.
+
+
+
+7. Rolling Back to Revision 1
+kubectl rollout undo deployment javawebappdeploy -n test-ns --to-revision=1
+
+deployment.apps/javawebappdeploy rolled back
+
+
+
+The currently active ReplicaSet (for example fd646865c) is scaled down → Pods go from 3 → 0.
+
+
+The old ReplicaSet that corresponds to revision 1 (e.g. 5946c6f494) is scaled up → Pods go from 0 → 3.
+
+
+Kubernetes logs this rollback as a new revision number (not 1 again).
+
+
+
+8. After Rollback to Rev 1
+If you now check history:
+kubectl rollout history deploy javawebappdeploy -n test-ns
+
+deployment.apps/javawebappdeploy
+REVISION  CHANGE-CAUSE
+2         <none>
+4         <none>
+5         <none>
+6         <none>
+
+You will see something like:
+
+
+Revision 1 is no longer listed directly.
+
+
+Your rollback to revision 1 has been recorded as revision 6.
+
+
+That means: revision 1 → replayed as 6.
+
+
+kubectl get all -n test-ns
+
+NAME                                         READY   STATUS    RESTARTS   AGE
+pod/javawebappdeploy-5946c6f494-j1b67        1/1     Running   0          5s
+pod/javawebappdeploy-5946c6f494-qc4xk        1/1     Running   0          5s
+pod/javawebappdeploy-5946c6f494-zstbw        1/1     Running   0          5s
+
+NAME                       TYPE       CLUSTER-IP     EXTERNAL-IP   PORT(S)        AGE
+service/javawebappsvc      NodePort   10.101.69.55   <none>        80:31567/TCP   29m
+
+NAME                                 READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/javawebappdeploy     3/3     3            3           29m
+
+NAME                                              DESIRED   CURRENT   READY   AGE
+replicaset.apps/javawebappdeploy-5946c6f494       3         3         3       29m
+replicaset.apps/javawebappdeploy-6549568847       0         0         0       22m
+replicaset.apps/javawebappdeploy-f65598948        0         0         0       18m
+replicaset.apps/javawebappdeploy-fd646865c        0         0         0       14m
+
+Kubernetes will:
+
+
+Scale down the current ReplicaSet (Pods → 0)
+
+
+Scale up the old ReplicaSet for revision 1 (Pods → 3)
+
+
+ReplicaSet 5946c6f494 (rev-1) became active again with 3 Pods running
+
+
+
+Rollback behavior:
+kubectl rollout undo --to-revision=N scales up the target revision’s existing ReplicaSet (if it still exists) and scales down the current one. The ReplicaSet’s revision number does not change (you’ll still see N in rollout history).
+
+2. RollingUpdate Strategy (Default)
+
+
+In this strategy, Pods are updated gradually, one by one (or in small batches).
+
+
+At any time, some old Pods keep running while new Pods are being created.
+
+
+This ensures minimal or zero downtime.
+
+
+When to use RollingUpdate?
+
+
+When the application must be available 24/7.
+
+
+When it’s safe for old and new versions to run together during the rollout.
+
+
+Example flow:
+Step 1: Existing Pods → [v1][v1][v1]
+Step 2: Replace one Pod → [v2][v1][v1]
+Step 3: Replace second Pod → [v2][v2][v1]
+Step 4: Replace third Pod → [v2][v2][v2]
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: javawebappdep
+  namespace: test-ns
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: javawebapp
+  template:
+    metadata:
+      name: javawebapp
+      labels:
+        app: javawebapp
+    spec:
+      containers:
+        - name: javawebapp
+          image: kkeducation12345/spring-app:1.0.4
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: javawebappsvc
+  namespace: test-ns
+spec:
+  type: NodePort
+  selector:
+    app: javawebapp
+  ports:
+    - port: 80
+      targetPort: 8080
+
+kubectl apply -f deploy.yaml
+
+deployment.apps/javawebappdeploy configured
+service/javawebappsvc unchanged
+
+kubectl get po -n test-ns
+
+You will see old Pods still running
+New Pods start creating
+Status may show: ContainerCreating, Running, or sometimes Error (like image pull issues).
+Old Pods Terminating, New Pods Running
+After a few seconds, new Pods reach Running state.
+At the same time, old Pods go into Terminating state.
+This is Kubernetes’ RollingUpdate strategy:
+
+
+Don’t stop all Pods at once.
+
+
+Gradually replace Pods to keep the service available without downtime.
+
+
+
+2. Final State
+
+
+Old ReplicaSet → scaled down → Pods count = 0.
+
+
+New ReplicaSet → scaled up → Pods count = 3.
+
+
+Now, only the new version Pods are running.
+
+
+
+3. Why RollingUpdate is Preferred
+
+
+No downtime → Users never notice the upgrade because at least one Pod is always running.
+
+
+Safer upgrades → New Pods are created step by step. If a Pod fails, the update stops before all old Pods are removed.
+
+
+Easy rollback → If there’s an issue, Kubernetes can quickly roll back to the previous ReplicaSet.
+
+
+Production standard → In real-world clusters, RollingUpdate is the default choice because it ensures high availability and smooth transitions.
+
+
+
+
+
+
+
 
 
