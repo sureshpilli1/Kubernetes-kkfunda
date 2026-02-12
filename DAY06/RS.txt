@@ -201,9 +201,9 @@ Prevents extra Pods: If more Pods exist than required, ReplicaSet deletes them.
 
 Label-based management: Pods are tracked by labels, not by name.
 
-Advanced selectors: Can use matchLabels (simple) or matchExpressions (advanced).
+⭐Advanced selectors: Can use matchLabels (simple) or matchExpressions (advanced).
 
-Deployment integration: Deployments use ReplicaSets internally to manage rolling updates.
+⭐Deployment integration: Deployments use ReplicaSets internally to manage rolling updates.
 
 2. Desired vs Observed State
 
