@@ -155,9 +155,12 @@ kubectl rollout undo deployment javawebappdep -n test-ns --to-revision 1
 BLOG NOTES:
 1. Introduction
 
-Kubernetes has changed the way we run and manage container-based applications. One of its most important features is the Deployment object. A Deployment takes care of creating and managing Pods for you, so your app is always available, scalable, and easy to update.
+Kubernetes has changed the way we run and manage container-based applications. 
+One of its most important features is the Deployment object. 
+A Deployment takes care of creating and managing Pods for you, so your app is always available, scalable, and easy to update.
 
-Instead of manually starting or stopping Pods, you just tell Kubernetes what you want (the desired state), and the Deployment makes it happen. Whether you need to release a new version or handle more traffic, Deployments make the process smooth and automatic.
+Instead of manually starting or stopping Pods, you just tell Kubernetes what you want (the desired state), 
+and the Deployment makes it happen. Whether you need to release a new version or handle more traffic, Deployments make the process smooth and automatic.
 
 2. What is a Deployment?
 
@@ -184,7 +187,8 @@ Kubernetes automatically replaces failed or unhealthy Pods to maintain the desir
 
 The controllerManager constantly watches the Pods and recreates them if they fail.
 
-Once the Kubernetes Deployment is set up, the only manual task is updating the configuration (such as changing the container image version or adjusting replica counts).
+Once the Kubernetes Deployment is set up, the only manual task is updating the configuration 
+(such as changing the container image version or adjusting replica counts).
 
 After that, Kubernetes handles everything else automatically:
 
@@ -204,7 +208,8 @@ Declarative Scaling → Adjust the number of replicas by changing a single field
 
 4. Deployment Strategies in Kubernetes
 
-When you release a new version of your application, Kubernetes provides different strategies to control how Pods are updated. The two main strategies are Recreate and RollingUpdate.
+When you release a new version of your application, Kubernetes provides different strategies to control how Pods are updated. 
+The two main strategies are Recreate and RollingUpdate.
 
 1. Recreate Strategy
 
@@ -677,7 +682,8 @@ This proves that your Deployment went through multiple rollouts (updates), and t
 
 
 Step 6: Kubernetes Deployment Rollout History and Rollback
-When you work with Kubernetes Deployments, every update creates a new revision. Kubernetes keeps track of these revisions so that you can roll back to a stable state if needed.
+When you work with Kubernetes Deployments, every update creates a new revision. 
+Kubernetes keeps track of these revisions so that you can roll back to a stable state if needed.
 Let’s walk through an example with a Deployment named javawebappdeploy running in the namespace test-ns.
 
 1. Checking Deployment Rollout History
@@ -877,7 +883,8 @@ ReplicaSet 5946c6f494 (rev-1) became active again with 3 Pods running
 
 
 Rollback behavior:
-kubectl rollout undo --to-revision=N scales up the target revision’s existing ReplicaSet (if it still exists) and scales down the current one. The ReplicaSet’s revision number does not change (you’ll still see N in rollout history).
+kubectl rollout undo --to-revision=N scales up the target revision’s existing ReplicaSet (if it still exists) and scales down the current one.
+The ReplicaSet’s revision number does not change (you’ll still see N in rollout history).
 
 2. RollingUpdate Strategy (Default)
 
