@@ -1,13 +1,17 @@
 
 1. Introduction
 
-In Kubernetes, different controllers manage how Pods are scheduled and maintained across the cluster. One of the most specialized and powerful among them is the DaemonSet—designed to ensure that a specific Pod runs on every Node, or on a targeted subset of Nodes.
+In Kubernetes, different controllers manage how Pods are scheduled and maintained across the cluster. 
+One of the most specialized and powerful among them is the DaemonSet—designed to ensure that a specific Pod runs on every Node, 
+or on a targeted subset of Nodes.
 
-This is very useful for background system tasks that should always be present on all Nodes, such as log collectors, monitoring agents, or networking services.
+This is very useful for background system tasks that should always be present on all Nodes, such as log collectors, 
+monitoring agents, or networking services.
 
 2. What Is a DaemonSet?
 
-A DaemonSet makes sure that one Pod runs on every Node in the cluster or only on selected Nodes. It’s perfect for background services that need to be available everywhere.
+A DaemonSet makes sure that one Pod runs on every Node in the cluster or only on selected Nodes. 
+It’s perfect for background services that need to be available everywhere.
 
 Key Features of DaemonSets
 1. One Pod per Node
@@ -35,7 +39,9 @@ Taints and Tolerations – allow Pods to run even on “restricted” Nodes (lik
 
 3. Common Use Cases of DaemonSet
 
-DaemonSets are ideal for workloads that need to run on every Node in a Kubernetes cluster. These are typically system-level services that provide observability, connectivity, or infrastructure support. Let’s explore the most common scenarios:
+DaemonSets are ideal for workloads that need to run on every Node in a Kubernetes cluster. 
+These are typically system-level services that provide observability, connectivity, or infrastructure support. 
+Let’s explore the most common scenarios:
 
 1. Monitoring
 
