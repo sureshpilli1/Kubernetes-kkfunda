@@ -2,7 +2,8 @@
 1. Introduction
 
 In Kubernetes, different controllers manage how Pods are scheduled and maintained across the cluster. 
-One of the most specialized and powerful among them is the DaemonSet—designed to ensure that a specific Pod runs on every Node, 
+One of the most specialized and powerful among them is the DaemonSet—designed 
+to ensure that a specific Pod runs on every Node, 
 or on a targeted subset of Nodes.
 
 This is very useful for background system tasks that should always be present on all Nodes, such as log collectors, 
