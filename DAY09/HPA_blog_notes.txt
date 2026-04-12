@@ -1,0 +1,263 @@
+1. Introduction
+One of the coolest features of Kubernetes is that it automatically scales your application based on demand.
+Imagine you have an app running smoothly with 2 Pods, but suddenly traffic spikes. Instead of manually adding more Pods, Kubernetes can auto-scale for you.
+That’s exactly what the Horizontal Pod Autoscaler (HPA) does.
+HPA monitors your application’s resource usage (like CPU or memory) and automatically increases or decreases the number of Pods to handle the load.
+
+2. What Is HPA?
+Before HPA, scaling was a manual process.
+Example:
+kubectl scale deployment <DEPLOYMENT_NAME> --replicas=<NUMBER_OF_REPLICAS>
+If traffic increases → you run the command and increase replicas manually
+If traffic decreases → again you scale down manually
+Problem: You always need to monitor usage and adjust replicas by hand
+With HPA:
+Kubernetes does this automatically based on CPU/Memory or custom metrics
+No need to run kubectl scale every time
+
+So the difference is:
+
+Manual scaling → kubectl scale command
+Auto scaling (HPA) → Kubernetes adjusts Pods for you
+Types of Scaling:
+Horizontal scaling → Add or remove Pods
+Vertical scaling → Give more CPU/Memory to existing Pods
+The Horizontal Pod Autoscaler (HPA) works on horizontal scaling.
+It automatically adjusts the number of Pods in a Deployment, ReplicaSet, or StatefulSet based on load — according to the values you define.
+You set a target metric (for example, CPU usage at 50%), and Kubernetes continuously monitors the Pods against this target.
+Example:
+(minReplicas: 2 and maxReplicas: 5)
+Low traffic → 2 Pods (minimum)
+High traffic → 5 Pods (maximum)
+Back to normal → scales down to 2 Pods
+If usage goes above the target → HPA adds Pods (scale out)
+If usage drops below the target → HPA removes Pods (scale in)
+HPA ensures the application always runs between the minimum and maximum replicas you define.
+
+3. Why Use HPA?
+Improved Performance → Ensures applications always have enough Pods to handle incoming traffic
+Cost Efficiency → Scales down Pods during low demand, saving resources and costs
+Resilience & Reliability → Automatically handles sudden traffic spikes, keeping apps available and stable
+
+4. How Does HPA Work?
+The Horizontal Pod Autoscaler continuously checks pod resource usage and adjusts replicas based on your targets.
+Steps:
+Metrics Collection
+HPA queries the metrics server (e.g., Kubernetes Metrics Server, Prometheus) for current CPU/Memory usage
+Comparison
+It compares actual usage with the target values defined in your HPA configuration
+Scaling Decision
+If usage is above or below the target, HPA recalculates the number of replicas and updates the Deployment/ReplicaSet accordingly
+In short:
+HPA collects metrics → compares with targets → scales Pods up or down automatically
+
+5. HPA vs VPA
+Horizontal Pod Autoscaler (HPA)
+Scales number of Pods
+Works on CPU, memory, or custom metrics
+Example: 2 Pods → 4 Pods when CPU > target
+Best for apps with variable traffic (web apps, APIs)
+Needs Metrics Server
+Vertical Pod Autoscaler (VPA)
+Scales resources per Pod (CPU/Memory)
+Does not increase Pod count
+Example: Pod CPU request changes from 200m → 500m
+Best for apps with stable traffic but unknown resource needs (DBs, ML workloads)
+Can run in recommendation mode or auto update mode
+
+6. Kubernetes HPA Demo
+Scaling in Kubernetes is one of the most powerful features. With HPA, your app automatically gets more Pods when demand is high and scales back down when demand is low.
+
+1. Check Metrics Availability
+HPA depends on live CPU/Memory metrics, but by default, they are not available.
+kubectl top nodes
+kubectl top po -A
+If you see:
+error: Metrics API not available
+This confirms that the Metrics Server is missing
+
+2. Setting up Metrics Server
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+Check if it’s running:
+kubectl get all -n kube-system
+Sometimes the metrics-server Pod shows 0/1 (TLS issue)
+
+3. Fix Metrics Server TLS Args
+If it crashes, edit the deployment:
+kubectl edit deploy metrics-server -n kube-system
+Add the following under spec.containers.args:
+
+--cert-dir=/tmp
+--secure-port=10250
+--kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
+--kubelet-use-node-status-port
+--metric-resolution=15s
+--kubelet-insecure-tls
+Save and exit — Kubernetes will roll out a new ReplicaSet.
+Check:
+kubectl get all -n kube-system
+metrics-server-bf688598-kb4gd → now Running (1/1)
+This confirms the new Pod from the new ReplicaSet is healthy
+Old RS → metrics-server-5dd7f7f59c has 0 Pods (terminated after edit)
+New RS → metrics-server-bf688598 has 1 Pod Ready (the new healthy one)
+
+4. Verify Metrics
+Now test again:
+kubectl top nodes
+kubectl top po -A
+You should now see CPU (milli-cores) and memory (MiB) usage.
+
+7. Deploy Demo App + HPA + Service
+Create hpa-demo.yaml
+
+7.1 Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hpadeployment
+  labels:
+    name: hpadeployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: hpapod
+  template:
+    metadata:
+      labels:
+        name: hpapod
+    spec:
+      containers:
+      - name: hpacontainer
+        image: k8s.gcr.io/hpa-example
+        ports:
+        - name: http
+          containerPort: 80
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "64Mi"
+          limits:
+            cpu: "100m"
+            memory: "128Mi"
+Here we are creating a Deployment named hpadeployment
+It will create 1 replica Pod initially
+Pod label: name=hpapod
+Container image: k8s.gcr.io/hpa-example
+CPU + memory requests/limits given (this is important for HPA to know how much usage %)
+
+7.2 HPA
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hpadeploymentautoscaler
+spec:
+  scaleTargetRef:        # <- MAIN LINK
+    apiVersion: apps/v1
+    kind: Deployment
+    name: hpadeployment  # <- HPA should point to Deployment name
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 30
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+Key points:
+scaleTargetRef → this is where HPA connects to the Deployment (must give the exact name hpadeployment)
+minReplicas: 2 → Even though Deployment had 1, HPA will override and make sure at least 2 Pods run
+maxReplicas: 4 → HPA will not go beyond 4 Pods
+Metrics:
+If CPU > 30% utilization → HPA will scale up
+If Memory > 80% utilization → HPA will scale up
+
+Note:
+Whatever replicas you give in Deployment, HPA will not respect it after attaching.
+It always goes by minReplicas and maxReplicas you defined in HPA.
+
+7.3 Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: hpaclusterservice
+  labels:
+    name: hpaservice
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+  selector:
+    name: hpapod
+  type: ClusterIP
+Here we expose the Pods internally (ClusterIP service)
+Selects Pods with label name=hpapod
+Listens on port 80
+Service doesn’t care about scaling, it just routes traffic to however many Pods HPA creates
+Apply:
+kubectl apply -f hpa-demo.yaml
+Check HPA
+kubectl get hpa
+NAME hpadeploymentautoscaler → this is your HPA object name
+REFERENCE Deployment/hpadeployment → means this HPA is directly controlling the Deployment named hpadeployment
+TARGETS cpu: 1%/30%, memory: 35%/80% → this shows current usage / target threshold
+CPU currently at 1%, target is 30%
+Memory currently at 35%, target is 80%
+
+Since both are below target, HPA will not scale up right now.
+
+MINPODS 2 → even though your Deployment spec had only 1 replica, HPA enforces at least 2 Pods
+MAXPODS → 4 → HPA will not go beyond 4 Pods
+REPLICAS → 2 → right now it is keeping 2 Pods running (respecting minPods)
+
+7.4 When will scaling happen?
+If CPU usage goes above 30% (say 45%, 70%, 90%), HPA will increase Pod count step by step (up to maxReplicas = 4)
+If Memory usage goes above 80%, same scaling up happens
+
+7.5 Watch it live
+Open two terminals (or VS Code splits) and watch:
+watch kubectl get po
+watch kubectl get hpa
+Initially you should see 2 pods Running and the HPA reporting low CPU/Memory
+
+8. Generate Load on the Service
+Now that HPA is watching CPU and Memory, let’s create artificial load so Pods get busy and scaling happens.
+Run this in a normal terminal:
+kubectl run -i --tty load-generator --rm --image=busybox -- /bin/sh
+This command creates a temporary BusyBox Pod where you can run load scripts.
+Inside the BusyBox shell, run:
+while true; do wget -q -O- http://hpaclusterservice; done
+What happens here?
+The service name hpaclusterservice (our ClusterIP service) is continuously hit
+BusyBox keeps sending traffic non-stop because the service forwards requests to Pods, those Pods get busy handling the traffic
+As CPU and memory usage rise above the HPA thresholds (CPU > 30%, Memory > 80%),
+HPA automatically scales Pods up (from 2 → 3 → 4)
+
+2. Observe Scaling in Action
+At first, everything is normal:
+CPU: 1% / 30%
+Memory: 35% / 80%
+Replicas: 2 (minPods)
+
+3. After generating load (BusyBox hitting hpaclusterservice continuously)
+Pods start getting busier → CPU & Memory usage rise above thresholds
+HPA detects this and begins to scale up
+You’ll see new Pods in ContainerCreating state
+The Deployment has scaled to 4 pods
+Two are newly created because load increased
+After stopping load
+When you exit BusyBox, the load generator Pod (load-generator) is removed (--rm flag makes it auto-delete)
+Since no traffic is hitting your service (hpaclusterservice) anymore, CPU and memory usage in your application Pods will drop back below the HPA target
+The HPA notices the usage is now low and starts scaling Pods down gradually, from 4 → 3 → 2 (the minReplicas you set).
+Kubernetes doesn’t scale down instantly because traffic can come suddenly again — so it reduces Pods slowly to avoid thrashing.
+So the flow is:
+
+High traffic → Pods scale up quickly
+Low/no traffic → Pods scale down slowly
