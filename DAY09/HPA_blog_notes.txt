@@ -282,3 +282,47 @@ These labels are NOT used for pod selection
 
 HPA does NOT use labels because:
 It needs to scale a specific object (Deployment), not a group of objects
+
+
+what is the difference between resource requests, limits in deployment and metrics in HPA
+Requests/limits define how much resource a container can use, while HPA metrics measure actual usage and decide scaling based on it.
+
+requests (Minimum guarantee)
+Means:
+“Kubernetes, I need at least this much resource”
+Example:
+cpu: 100m → 0.1 CPU guaranteed
+Scheduler uses this to:
+decide where to place the pod
+
+limits (Maximum cap)
+Means:
+“Do not allow container to use more than this”
+Example:
+memory: 128Mi
+If exceeded:
+container may be killed (OOMKilled)
+Summary
+Type	Meaning
+requests	minimum guarantee
+limits	maximum allowed
+🔹 2. What are Metrics in HPA?
+
+Horizontal Pod Autoscaler uses metrics like:
+CPU usage
+Memory usage
+custom metrics
+Meaning:
+
+HPA says:
+“If CPU usage > 50%, increase pods”
+
+| Concept  | Role                     |
+| -------- | ------------------------ |
+| requests | baseline for calculation |
+| metrics  | actual usage             |
+| HPA      | compares both            |
+
+If you don’t set requests:
+HPA cannot calculate properly
+Scaling becomes wrong
