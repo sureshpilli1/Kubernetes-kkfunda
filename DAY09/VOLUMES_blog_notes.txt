@@ -1,0 +1,540 @@
+1. Introduction
+In Kubernetes, Pods are ephemeral (temporary) they can be deleted, recreated, or shifted to other nodes at any time.
+This is great for scalability, but it creates a big problem for applications that need to store data permanently, like databases.
+Example:
+If you deploy a MongoDB Pod and store user registration data inside it, when that Pod is deleted or rescheduled on another node, the stored data will be lost.
+To solve this problem, Kubernetes provides Volumes.
+
+2. What is a Volume?
+A Volume in Kubernetes is a directory that is mounted inside a Pod and shared with its containers, allowing data to survive container restarts.
+Even if a container restarts, the data inside the Volume remains available.
+However, it is important to understand that Volumes are attached at the Pod level, not automatically shared across the entire cluster.
+To achieve true data persistence across nodes, we need shared storage solutions such as NFS, which we will explore later in this demo.
+
+2.1 Types of Volumes in Kubernetes
+Let’s see the most commonly used types.
+
+1. EmptyDir
+A simple storage space created when a Pod starts.
+Data is deleted when the Pod is removed.
+Mainly used for temporary data (like cache or scratch space).
+
+2. HostPath
+Mounts a directory from the Node’s filesystem into the Pod.
+Useful when you want to store data on the Node’s local storage.
+If the Pod moves to another Node → data does not move with it.
+
+3. NFS
+Mounts a Network File System (NFS) share.
+Data is stored centrally on an NFS server.
+Pods on any Node can access the same data.
+This is ideal for persistent data like databases.
+
+3. Demo 1: Without Volumes (Data Lost)
+3.1 Deploy MongoDB (No Volumes)
+Let’s deploy MongoDB without any volume.
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata: 
+  name: mongodb
+  namespace: test-ns
+spec:
+  replicas: 1
+  selector: 
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongocon
+        image: mongo
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: devdb
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: devdb@123
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongosvc
+  namespace: test-ns
+spec:
+  type: ClusterIP
+  selector:
+    app: mongodb
+  ports:
+    - port: 27017
+      targetPort: 27017
+
+
+3.2 Understanding the env: Section in Kubernetes
+In Kubernetes, inside your Pod or container specification, you can define environment variables using the env: field.
+Environment variables are used to pass configuration values (like database credentials, hostnames, API keys, etc.) into containers without hardcoding them inside the application code.
+Example: MongoDB Environment Variables
+env:
+- name: MONGO_INITDB_ROOT_USERNAME
+  value: devdb
+- name: MONGO_INITDB_ROOT_PASSWORD
+  value: devdb@123
+Explanation:
+env: → This tells Kubernetes that we are going to define environment variables for the container.
+name: → The name of the environment variable inside the container.
+value: → The actual value we want to assign.
+
+3.3 What These Variables Do
+MongoDB’s official Docker image expects certain predefined environment variables when the container starts.
+These variables help MongoDB initialize the database with a username and password for authentication.
+Variable	Purpose
+MONGO_INITDB_ROOT_USERNAME	Creates a root (admin) user when Mongo starts
+MONGO_INITDB_ROOT_PASSWORD	Sets the password for that root user
+So when the container starts, MongoDB automatically runs an initialization process to create this user inside the database.
+
+3.4 Applying the YAML file
+kubectl apply -f with-out-volumes.yaml
+Output:
+replicaset.apps/mongodb created
+service/mongosvc created
+This command reads your YAML and creates:
+A ReplicaSet named mongodb in the namespace test-ns
+A Service named mongosvc that exposes MongoDB internally (ClusterIP)
+
+3.5 Checking all resources
+kubectl get all -n test-ns
+Output:
+Pod: mongodb-xxxx → Running
+Service: mongosvc → ClusterIP
+ReplicaSet: mongodb → Desired=1, Current=1, Ready=1
+Kubernetes successfully launched 1 Pod from the ReplicaSet, and the Service is exposing it internally within the cluster.
+
+3.6 Node details
+kubectl get nodes
+Control plane node → ip-172-31-41-230
+Worker nodes → ip-172-31-0-107, ip-172-31-9-28
+Your cluster has one control-plane and two worker nodes.
+
+3.7 Checking which Node the Pod runs on
+kubectl get all -n test-ns -o wide
+Pod IP → 10.44.0.1
+Running on Node → ip-172-31-9-28
+The Pod (MongoDB container) is deployed on the worker node ip-172-31-9-28.
+The Service (ClusterIP) will internally route traffic to that Pod.
+
+3.8 Deploy the Spring application
+Deploy the Spring Boot application:
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: springapp
+  namespace: test-ns
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: springapp
+  template:
+    metadata:
+      labels:
+        app: springapp
+    spec:
+      containers:
+      - name: springapp
+        image: kkeducation12345/spring-app:1.0.0
+        ports:
+        - containerPort: 8080
+        env:
+        - name: MONGO_DB_HOSTNAME
+          value: mongosvc
+        - name: MONGO_DB_PASSWORD
+          value: devdb@123
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: springappsvc
+  namespace: test-ns
+spec:
+  type: NodePort
+  selector:
+    app: springapp
+  ports:
+  - port: 80
+    targetPort: 8080
+Apply it:
+kubectl apply -f springapp.yaml
+Output:
+deployment.apps/springapp created
+service/springappsvc created
+Check All Resources in the Namespace
+kubectl get all -n test-ns
+Output:
+Pod: springapp-xxxx → Running
+Service: springappsvc → NodePort
+Deployment: springapp → 2/2 Ready
+Your Deployment (Spring Boot app) and Service (NodePort) were successfully created.
+
+3.9 Open the App & Register a User
+Now access the app → register a user → data gets stored inside /data/db of the Mongo container.
+If you delete the MongoDB Pod and a new Pod comes up, the data is gone.
+This happens because we haven’t attached any persistent storage yet.
+
+3.10 Delete the MongoDB Pod & Watch What Happens
+Now force-delete the MongoDB Pod (Kubernetes will recreate it possibly on a different node):
+kubectl delete po mongodb-vdgd1 -n test-ns
+Output:
+pod "mongodb-vdgd1" deleted
+After deleting the MongoDB Pod:
+Kubernetes immediately creates a new Pod to maintain the desired replica count.
+Run the following command to inspect all Pods with node details:
+kubectl get pods -n test-ns -o wide
+Kubernetes recreated the Pod on a different node.
+
+3.11 Open the Application and Observe the Data Loss
+Now, let’s verify what happened after MongoDB was automatically recreated on another node.
+Open your Spring Boot web application again using the NodePort URL.
+Once the page loads, you’ll notice that:
+The application UI is still working fine (because Kubernetes recreated the MongoDB Pod and reconnected it via the mongosvc service).
+But the Saved Users section is now empty.
+The user record you registered earlier is gone.
+
+4. Demo 2 – Using HostPath Volumes for MongoDB Data Persistence
+In the previous demo, we saw that deleting the MongoDB Pod caused the data to disappear because MongoDB was using its container’s internal filesystem (/data/db).
+Now, we’ll fix that problem by attaching a HostPath volume so MongoDB stores its data directly on the worker-node filesystem.
+When the Pod is deleted and recreated (even on the same node), it will reuse the same host directory and recover all previously stored data.
+
+4.1 Delete the Existing MongoDB ReplicaSet
+Before applying the new configuration, delete the old MongoDB ReplicaSet:
+kubectl delete rs mongodb -n test-ns
+Output:
+replicaset.apps "mongodb" deleted
+This removes the old ReplicaSet and its Pods.
+
+4.2 Apply the New YAML with HostPath Volume
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata: 
+  name: mongodb
+  namespace: test-ns
+spec:
+  replicas: 1
+  selector: 
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongocon
+        image: mongo
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: devdb
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: devdb@123
+        volumeMounts:
+        - name: mongovol
+          mountPath: /data/db
+      volumes:
+      - name: mongovol
+        hostPath:
+          path: /mongobkp
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongosvc
+  namespace: test-ns
+spec:
+  type: ClusterIP
+  selector:
+    app: mongodb
+  ports:
+    - port: 27017
+      targetPort: 27017
+
+4.3 Understanding the Volume Section
+In your YAML, you have this section:
+
+volumeMounts:
+  - name: mongovol
+    mountPath: /data/db
+
+volumes:
+  - name: mongovol
+    hostPath:
+      path: /mongobkp
+Let’s break this down line by line
+VolumeMounts
+This part defines where inside the container MongoDB will store its data. Here, we’re telling Kubernetes:
+“Mount the volume named mongovol inside the container at /data/db.”
+/data/db is MongoDB’s default data directory it’s where MongoDB writes all its database files (like collections, indexes, and journals).
+Volumes
+This part defines what the actual storage source is on the Kubernetes node (host).
+Here we’re saying:
+“The volume called mongovol is backed by a hostPath and that path on the node is /mongobkp.”
+kubectl apply -f hostpath-vol.yaml
+Output:
+replicaset.apps/mongodb created
+service/mongosvc unchanged
+Now apply your updated configuration file (hostpath-vol.yaml):
+This redeploys MongoDB with a HostPath volume mounted to /data/db inside the container, mapping it to /mongobkp on the worker node.
+
+4.4 Verify the Pod and Node Details
+Check which node your new MongoDB Pod is running on:
+kubectl get po -n test-ns -o wide
+You can see the new Pod (mongodb-chvlw) is running on
+Node: ip-172-31-9-28, with Pod IP: 10.44.0.1
+4.5 Check the Data Directory on the Node
+Now, SSH into the worker node (ip-172-31-9-28) and check the /mongobkp directory:
+cd /
+ls -lrth mongobkp/
+You can see multiple MongoDB data files
+(WiredTiger.wt, storage.bson, collection.wt, diagnostic.data, etc.)*
+This confirms MongoDB is writing directly to the node’s host filesystem.
+
+4.6 Open the Spring Boot Application and Add a Record
+Access your Spring Boot + MongoDB app again:
+Register a new user
+You’ll see the record appear under the Saved Users table
+
+4.7 Delete the MongoDB Pod and Observe
+Now delete the MongoDB Pod again to simulate a restart:
+kubectl delete po mongodb-chvlw -n test-ns
+kubectl get po -n test-ns -o wide
+After a few seconds, run:
+kubectl get po -n test-ns -o wide
+You’ll see a new Pod (mongodb-h5dhf) created, but now it’s scheduled on another node
+(e.g., ip-172-31-0-107) with a new Pod IP.
+
+4.8 Observation After Pod Restart on Another Node
+Once the MongoDB Pod restarted on a different node, the application behavior changed:
+All previously saved users (GANGAVARAM / PRASANTH) disappeared
+The database appeared empty
+Now, when we registered a new user (RAVI):
+Only the newly added RAVI record was visible
+Old records were not recovered
+When you registered a new user again, it showed only the newly added data, not the old records.
+
+(Continuation Observation after restart)
+This time, you can observe that the previously saved users (GANGAVARAM / PRASANTH) appear again in the application because the Pod has been scheduled on a node where this data was previously written.
+MongoDB simply reads whatever local data is available on that worker node’s filesystem.
+Since different nodes contain different copies of data in their local /mongobkp directories, the application shows different results depending on the node where the Pod is running.
+This behavior clearly demonstrates data inconsistency, not true persistence.
+HostPath is node-specific, not cluster-wide. It is not suitable for databases in production.
+
+5. Moving to NFS: Solving Data Inconsistency
+So far, we have seen that HostPath volumes cause data inconsistency because data is stored locally on individual worker nodes.
+When the MongoDB Pod moves between nodes, it reads different local data, which is not true persistence.
+To solve this problem, we now move to a centralized storage solution – NFS (Network File System).
+With NFS:
+Data is stored on a separate NFS server
+All Kubernetes worker nodes access the same shared directory
+Pod rescheduling across nodes does not affect data
+
+5.1 NFS Server Setup
+
+Step 1: Launch an EC2 Instance
+Launch a new EC2 machine (Ubuntu) and connect to it via SSH.
+This machine will act as the NFS Server.
+
+Step 2: Update the Package Manager
+sudo apt update -y
+
+Step 3: Allow NFS Port (2049)
+Allow port 2049 in the Security Group of the NFS server.
+This port is required for NFS communication between the server and clients.
+
+Step 4: Install NFS Server Software
+sudo apt install nfs-kernel-server -y
+This installs the NFS server components.
+
+Step 5: Create the NFS Shared Directory
+sudo mkdir -p /mnt/nfs_share
+sudo chown nobody:nogroup -R /mnt/nfs_share/
+sudo chmod 777 -R /mnt/nfs_share/
+This directory will be shared across all Kubernetes nodes.
+
+Step 6: Configure NFS Exports
+Edit the NFS exports file:
+sudo vi /etc/exports
+Add the following line:
+/mnt/nfs_share *(rw,sync,no_subtree_check,no_root_squash)
+This line tells the NFS server:
+Share the directory /mnt/nfs_share with all client machines and allow them to read, write, and safely store data from Kubernetes Pods.
+Explanation:
+rw → read & write access
+sync → data is written synchronously
+no_subtree_check → improves reliability
+no_root_squash → allows containers to write as root
+
+Step 7: Export the Shared Directory
+sudo exportfs -a
+sudo systemctl restart nfs-kernel-server
+This makes the shared directory available to clients.
+
+Step 8: Verify NFS Server Status
+ps -ef | grep -i nfs
+This confirms that the NFS processes are running.
+
+5.2 Configuring NFS Clients (Kubernetes Nodes)
+This step must be performed on ALL Kubernetes worker nodes
+In our cluster, we have two worker nodes, and NFS client packages must be installed on both of them. These worker nodes act as NFS clients, which means:
+They communicate with the NFS server
+They mount the shared NFS directory
+Pods running on these nodes can read and write data to the shared storage
+By installing the NFS client (nfs-common) on every worker node, we enable proper communication between Kubernetes nodes and the NFS server, ensuring that data is accessible regardless of where the Pod is scheduled.
+Install NFS Client Packages
+sudo apt update -y
+sudo apt install nfs-common -y
+
+5.3 Create MongoDB YAML with NFS Volume
+Now let’s create the YAML from scratch, properly
+vi mongo-nfs.yaml
+MongoDB ReplicaSet with NFS Volume
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: mongodb
+  namespace: test-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongocon
+        image: mongo:8.0.9-noble
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: devdb
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: devdb@123
+        volumeMounts:
+        - name: mongonfsvol
+          mountPath: /data/db
+      volumes:
+      - name: mongonfsvol
+        nfs:
+          server: 172.31.9.244
+          path: /mnt/nfs_share
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongosvc
+  namespace: test-ns
+spec:
+  type: ClusterIP
+  selector:
+    app: mongodb
+  ports:
+    - port: 27017
+      targetPort: 27017
+
+
+volumeMounts
+mountPath: /data/db
+/data/db is MongoDB default data directory
+MongoDB writes all collections, indexes, journal files here
+nfs
+server: 172.31.9.244
+path: /mnt/nfs_share
+
+172.31.9.244 → NFS Server IP
+/mnt/nfs_share → shared directory on NFS server
+All worker nodes access same directory
+No matter where the Pod runs, data is SAME
+
+5.4 Apply the YAML
+kubectl apply -f mongo-nfs.yaml
+Output
+replicaset.apps/mongodb created
+service/mongosvc created
+MongoDB is now running with NFS-backed storage
+
+5.5 Verify Pod Placement
+kubectl get all -n test-ns -o wide
+You will see:
+MongoDB Pod running on node ip-172-31-35-213
+Pod IP assigned
+
+5.6 Access Application & Add User
+Open Spring Boot application in browser
+Add user:
+First Name: Sairam
+Last Name: N
+Email: kkeducationblr@gmail.com
+User appears under Saved Users section
+Data stored in MongoDB via NFS
+
+5.7 Delete MongoDB Pod (1st Time)
+kubectl delete pod mongodb-g6w7p -n test-ns
+Kubernetes recreates the Pod automatically
+Now check again:
+kubectl get all -n test-ns -o wide
+MongoDB Pod is now running on another node (ip-172-31-40-71)
+
+5.8 Verify Data After Node Change
+Open the application again
+Observation:
+User Sairam is STILL visible
+Data NOT lost
+Because MongoDB reads data from shared NFS storage
+
+5.9 Add Another User
+Add new user:
+First Name: Prasanth
+Now application shows: Sairam & Prasanth
+
+5.10 Delete MongoDB Pod Again
+kubectl get all -n test-ns -o wide
+This time Pod moves back to: node ip-172-31-35-213
+kubectl delete pod mongodb-5nzp1 -n test-ns
+kubectl get all -n test-ns -o wide
+Pod is recreated automatically
+Now running again on previous node
+
+5.11 Final Verification
+Open application again
+Observation:
+Both users Sairam and Prasanth are visible
+No data loss
+Pod moved across nodes, but data remained same
+
+6. Conclusion
+Kubernetes Pods are temporary, so storing data inside containers leads to data loss when Pods restart or move between nodes
+Storage Behavior
+No Volume → Data is lost
+HostPath → Data persists only on same node (causes inconsistency)
+NFS → Shared storage across all nodes (data remains safe)
+Key Understanding
+Node-local storage is NOT true persistence
+Data changes based on node → ❌ Not reliable
+Best Practice
+For stateful applications (like databases):
+Use shared storage
+Examples:
+NFS
+PV/PVC
+Final Concept (Very Important)
+Stateless Apps (Spring Boot, APIs)
+No need for persistent storage
+Stateful Apps (MongoDB, MySQL)
+
+MUST use shared storage
