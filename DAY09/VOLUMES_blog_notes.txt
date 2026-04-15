@@ -540,3 +540,90 @@ No need for persistent storage
 Stateful Apps (MongoDB, MySQL)
 
 MUST use shared storage
+
+
+
+NOTS FROM CHATGPT:
+
+how can i know that i should give 
+name: MONGO_DB_HOSTNAME
+value: mongosvc
+in this yaml file
+
+The Core Answer (Very Important)
+You don’t “guess” variable names like MONGO_DB_HOSTNAME
+You must get them from:
+Application code OR documentation
+
+There are only 3 sources 
+1. Application Code (Most Important)
+Check your Spring Boot code
+Example:
+System.getenv("MONGO_DB_HOSTNAME")
+If this exists → you MUST define:
+- name: MONGO_DB_HOSTNAME
+
+2. application.properties / application.yml
+Example:
+spring.data.mongodb.host=${MONGO_DB_HOSTNAME}
+spring.data.mongodb.username=${MONGO_DB_USERNAME}
+spring.data.mongodb.password=${MONGO_DB_PASSWORD}
+Then your YAML must match these names
+
+3. Documentation (Docker image / project)
+If using image:
+kkeducation12345/spring-app:1.0.0
+Check:
+README
+DockerHub page
+GitHub repo
+Important Realization
+
+This is CORRECT thinking 
+“What variables does my application expect?”
+
+Why mongosvc?
+value: mongosvc
+This comes from your Kubernetes Service:
+kind: Service
+metadata:
+  name: mongosvc
+
+Kubernetes DNS automatically provides:
+mongosvc → MongoDB Pod IP
+Full Flow
+Spring App → mongosvc → MongoDB Pod
+
+How to Decide Correct Variables (Step-by-Step)
+
+Step 1
+Check application config:
+Does it use:
+SPRING_DATA_MONGODB_URI ?
+OR custom variables ?
+
+Step 2
+If using Spring Boot standard:
+- name: SPRING_DATA_MONGODB_URI
+
+Step 3
+If custom app:
+Use exactly what code expects
+
+Your Case (Most Likely)
+Your image probably expects:
+MONGO_DB_HOSTNAME
+MONGO_DB_USERNAME
+MONGO_DB_PASSWORD
+That’s why tutorial used it
+Real DevOps Rule (VERY IMPORTANT)
+Environment variable names are defined by the application, NOT Kubernetes
+
+Best Practice (Professional Way)
+Instead of guessing:
+Use standard Spring Boot config:
+env:
+- name: SPRING_DATA_MONGODB_URI
+  value: mongodb://devdb:devdb@123@mongosvc:27017
+Final One-Line Answer
+You know to use MONGO_DB_HOSTNAME only by checking application code or configuration — Kubernetes itself does NOT define it.
