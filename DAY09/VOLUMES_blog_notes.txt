@@ -131,17 +131,17 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: springapp
-  namespace: test-ns
+  namespace: test-ns 
 spec:
   replicas: 2
-  selector:
+  selector: 
     matchLabels:
       app: springapp
   template:
     metadata:
       labels:
         app: springapp
-    spec:
+    spec:  
       containers:
       - name: springapp
         image: kkeducation12345/spring-app:1.0.0
@@ -150,6 +150,8 @@ spec:
         env:
         - name: MONGO_DB_HOSTNAME
           value: mongosvc
+        - name: MONGO_DB_USERNAME
+          value: devdb
         - name: MONGO_DB_PASSWORD
           value: devdb@123
 ---
