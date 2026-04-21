@@ -356,3 +356,92 @@ Multiple pods can use same storage
 🔚 Final One-Line Understanding
 
 👉 NFS provides actual storage, PV represents it in Kubernetes, PVC requests it, and Pods use it through PVC.
+
+
+
+
+with the above yml file we are able to get the data persistence then what is the need of creating PV and PVC
+
+You’re right that your manifest works and persists data 👍 — but it’s doing that by hard-wiring the Pod directly to NFS. That’s exactly why Kubernetes introduced PV/PVC: to decouple apps from storage details.
+Let’s make the difference crystal clear.
+What your current YAML is doing
+volumes:
+- name: mongonfsvol
+  nfs:
+    server: 172.31.9.244
+    path: /mnt/nfs_share
+
+Flow:
+Pod → NFS server (direct)
+Data persists
+But the Pod is tightly coupled to that NFS endpoint
+
+Problems with this approach
+1. Tight coupling to infrastructure
+Your app knows:
+IP = 172.31.9.244
+Path = /mnt/nfs_share
+If anything changes:
+NFS IP changes
+path changes
+move to EKS / cloud storage
+You must edit app YAML
+
+2. Not portable
+If you move to:
+AWS EBS
+Azure Disk
+different NFS
+You must rewrite manifests
+3. No centralized storage management
+Storage config is scattered inside app YAML
+Hard for admins to manage 
+
+4. No dynamic provisioning
+Every app must define storage manually
+
+Now Enter PV & PVC (The Proper Way)
+New Flow
+Pod → PVC → PV → NFS
+Why This is Better
+1. Decoupling (MOST IMPORTANT)
+Pod only knows:
+persistentVolumeClaim:
+  claimName: mongo-pvc
+It does NOT know:
+NFS IP
+storage type
+
+2. Easy Storage Change
+Today:
+PV → NFS
+Tomorrow:
+PV → AWS EBS
+Pod YAML stays SAME
+
+3. Admin vs Developer Separation
+Role	Responsibility
+Admin	creates PV (storage backend)
+Developer	creates PVC (request)
+
+4. Dynamic Provisioning (Big Advantage)
+With StorageClass:
+PVC created → PV auto-created
+No manual storage setup needed
+
+5. Reusability
+Same PVC can be reused
+Storage lifecycle managed independently
+
+Side-by-Side Comparison
+| Feature        | Direct NFS (your YAML) | PV + PVC         |
+| -------------- | ---------------------- | ---------------- |
+| Simplicity     | ✅ simple               | slightly complex |
+| Portability    | ❌ low                  | ✅ high           |
+| Flexibility    | ❌ low                  | ✅ high           |
+| Best practice  | ❌ not recommended      | ✅ recommended    |
+| Production use | ❌ rarely               | ✅ standard       |
+
+
+Final One-Line Answer
+Direct NFS works, but PV/PVC are needed to decouple applications from storage, improve portability, enable dynamic provisioning, and follow production-grade Kubernetes architecture.
