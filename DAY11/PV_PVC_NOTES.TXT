@@ -213,6 +213,7 @@ If no PV exists, the PVC stays Pending, and since the Pod depends on the PVC, th
 
 
 
+what is exactly are volumes and volume mounts, what are the contents in them 
 
 
 
@@ -233,7 +234,6 @@ volumeMount = How container uses that storage
 | Knows about PVC | Yes                | No                    |
 
 
-what is exactly are volumes and volume mounts, what are the contents in them 
 
 1. What is a volume in Kubernetes?
 A volume is simply:
