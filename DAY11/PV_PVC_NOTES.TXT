@@ -210,6 +210,137 @@ NFS is external storage. PV brings that storage into Kubernetes. PVC gives that 
 If no PV exists, the PVC stays Pending, and since the Pod depends on the PVC, the Pod also stays Pending because storage is unavailable.
 
 
+
+
+
+
+
+
+volumes → "Where storage comes from"
+volumeMounts → "Where storage goes inside container"
+
+volumes = backend connection (PVC, emptyDir, etc.)
+volumeMounts = frontend usage (path inside container)
+
+Volume = Storage defined for Pod
+volumeMount = How container uses that storage
+
+| Feature         | volumes            | volumeMounts          |
+| --------------- | ------------------ | --------------------- |
+| Defined in      | Pod                | Container             |
+| Purpose         | Define storage     | Use storage           |
+| Contains        | Source (PVC, etc.) | Path inside container |
+| Knows about PVC | Yes                | No                    |
+
+
+what is exactly are volumes and volume mounts, what are the contents in them 
+
+1. What is a volume in Kubernetes?
+A volume is simply:
+A storage resource made available to a Pod
+It is defined at Pod level.
+
+What does a volume contain?
+A volume definition contains:
+1. name (mandatory)
+name: myvolume
+A label used inside the Pod
+
+2. Volume source (very important)
+This tells Kubernetes:
+“Where does this storage come from?”
+Examples:
+PVC (your case)
+persistentVolumeClaim:
+  claimName: mongodb-pvc
+
+emptyDir (temporary storage):
+emptyDir: {}
+
+ConfigMap:
+configMap:
+  name: my-config
+Secret:
+secret:
+  secretName: my-secret
+So structure is:
+volumes:
+- name: <volume-name>
+  <volume-type>: <source-details>
+
+2. What is a volumeMount?
+A volumeMount is:
+How a container uses a volume
+It is defined at container level.
+What does a volumeMount contain?
+1. name (mandatory)
+name: myvolume
+Must match volume name
+
+2. mountPath (mandatory)
+mountPath: /data
+Where the storage appears inside container
+
+3. Optional fields (advanced)
+readOnly
+readOnly: true
+subPath
+subPath: logs
+So structure is:
+volumeMounts:
+- name: <volume-name>
+  mountPath: <path-inside-container>
+
+3. How they work together
+Think of it like 2 steps:
+
+Step 1: Define storage
+volumes:
+- name: myvolume
+  persistentVolumeClaim:
+    claimName: mongodb-pvc
+
+“I have storage ready”
+
+Step 2: Use storage
+volumeMounts:
+- name: myvolume
+  mountPath: /data/db
+
+ “Attach it here”
+
+4. Visual understanding
+[Volume]
+(name: myvolume)
+   ↓
+Storage source (PVC / emptyDir / etc.)
+   ↓
+[volumeMount]
+   ↓
+Mounted inside container at /data/db
+
+5. Your MongoDB example in plain English
+volumes:
+- name: mongonfsvol
+  persistentVolumeClaim:
+    claimName: mongodb-pvc
+Meaning:
+“Create a volume called mongonfsvol using this PVC”
+volumeMounts:
+- name: mongonfsvol
+  mountPath: /data/db
+Meaning:
+“Mount that volume inside container at /data/db”
+
+
+
+
+
+
+
+
+
+
 NOTES FROM CHATGPT:
 
 can you please explain me how PV, PVC and NFS are connected 
