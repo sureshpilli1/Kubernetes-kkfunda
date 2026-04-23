@@ -1,0 +1,256 @@
+1. Why probes are needed
+A container can be:
+Running 
+But not actually working
+Examples:
+App is stuck (deadlock)
+DB connection failed
+App still starting
+Kubernetes needs a way to check health, not just “is the process running?”
+
+2. Two main probes
+Liveness Probe  → "Is the app alive?"
+Readiness Probe → "Is the app ready to serve traffic?"
+
+3. Liveness Probe (very important)
+Purpose:
+Detect if the container is broken and needs restart
+What happens if it fails?
+Fail → Kubernetes restarts container
+Example
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+Kubernetes checks:
+http://container:8080/health
+If it fails repeatedly → container is restarted
+Real-world analogy
+Like:
+"Is the person alive? If not → call ambulance (restart)"
+
+4. Readiness Probe
+Purpose:
+Check if app is ready to receive traffic
+What happens if it fails?
+Fail → Pod is removed from Service (no traffic)
+Important:
+Container is NOT restarted
+Just traffic is stopped
+Example
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 5
+Real-world analogy
+Like:
+"Are you ready to work?"
+If not → don’t assign tasks (no traffic)
+
+5. Key difference (VERY IMPORTANT)
+Feature	Liveness	Readiness
+Purpose	Detect crash/stuck app	Check if ready for traffic
+On failure	Restart container	Remove from service
+Traffic impact	Indirect	Direct
+Use case	Deadlocks, crashes	Startup, DB dependency
+
+6. Types of probes
+Kubernetes supports 3 types:
+1. HTTP Probe
+httpGet:
+  path: /health
+  port: 8080
+Most common for web apps
+
+2. TCP Probe
+tcpSocket:
+  port: 27017
+Checks if port is open
+
+3. Command (exec) Probe
+exec:
+  command:
+  - cat
+  - /tmp/healthy
+Runs command inside container
+
+7. Important parameters
+initialDelaySeconds
+Wait before first check
+periodSeconds
+How often to check
+failureThreshold
+How many failures before action
+timeoutSeconds
+How long to wait for response
+
+8. Full example (your style)
+containers:
+- name: springapp
+  image: myapp
+  ports:
+  - containerPort: 8080
+
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8080
+    initialDelaySeconds: 30
+    periodSeconds: 10
+
+  readinessProbe:
+    httpGet:
+      path: /ready
+      port: 8080
+    initialDelaySeconds: 10
+    periodSeconds: 5
+
+9. How traffic flow changes
+Pod starts
+   ↓
+Readiness = FAIL → No traffic
+   ↓
+Readiness = PASS → Traffic starts
+   ↓
+Liveness fails → Container restarted
+
+10. Common mistakes
+Using same endpoint for both without thinking
+No delay → app restarts continuously
+Liveness too aggressive → crash loop
+Forgetting readiness → traffic goes too early
+
+11. When to use what
+Use Readiness when:
+App needs time to start
+Depends on DB/API
+Warm-up required
+Use Liveness when:
+App may hang
+Deadlocks possible
+Memory leaks
+
+12. Pro tip (DevOps level)
+Always design endpoints:
+
+/health  → liveness
+/ready   → readiness
+Final summary
+Liveness = Restart if broken
+Readiness = Send traffic only when ready
+
+
+
+explain me every line in the below YML file and their functions 
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+ 
+1. livenessProbe:
+This tells Kubernetes:
+“I want you to continuously check if my container is alive.”
+It belongs inside a container spec
+It activates health monitoring + auto-restart
+
+2. httpGet:
+This defines how Kubernetes will check health
+“Use an HTTP request to test the application”
+Kubernetes will internally do something like:
+curl http://<pod-ip>:8080/health
+
+3. path: /health
+This is the endpoint path to call
+Full URL becomes:
+http://<pod-ip>:8080/health
+Your application must implement this endpoint
+Example:
+Spring Boot → /actuator/health
+Custom app → /health
+
+4. port: 8080
+This is the container port
+Must match your app port:
+ports:
+- containerPort: 8080
+Kubernetes sends request to:
+Pod IP + Port 8080
+
+5. initialDelaySeconds: 30
+This is very important
+“Wait 30 seconds before starting health checks”
+Why needed?
+When container starts:
+App may take time to boot
+DB connections may not be ready
+Without delay:
+Probe runs immediately → fails → container restarts
+With delay:
+Wait → app starts → probe succeeds ✔
+
+6. periodSeconds: 10
+This defines:
+“Check every 10 seconds”
+Example timeline
+Time 0s   → container starts
+Time 30s  → first check
+Time 40s  → second check
+Time 50s  → third check
+...
+
+7. What Kubernetes expects as SUCCESS
+HTTP response code:
+200–399 → SUCCESS 
+anything else → FAILURE
+
+8. What happens on failure?
+Even though not shown here, defaults apply:
+failureThreshold = 3 (default)
+So:
+Fail 1 → retry
+Fail 2 → retry
+Fail 3 → restart container
+
+9. Full execution flow
+Container starts
+   ↓
+Wait 30 seconds (initialDelaySeconds)
+   ↓
+Send HTTP request (/health)
+   ↓
+Success → do nothing ✔
+Failure → retry every 10s
+   ↓
+3 failures → container restart
+
+10. Real-world meaning of this config
+You are telling Kubernetes:
+“After 30 seconds, check my app every 10 seconds.
+If it stops responding properly, restart it.”
+
+11. Common issues (important)
+Wrong path
+path: /health
+But app doesn’t have /health → always fails
+Port mismatch
+port: 8080
+But app runs on 9090 → fails
+Delay too small
+initialDelaySeconds: 5
+App needs 20 sec → crash loop
+
+12. Small improvement (recommended)
+Add these for better control:
+timeoutSeconds: 5
+failureThreshold: 3
+Final one-line explanation
+This config means:
+"After 30 seconds, check /health every 10 seconds on port 8080.
+If it fails repeatedly, restart the container."
