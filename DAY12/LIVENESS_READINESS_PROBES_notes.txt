@@ -15,6 +15,9 @@ Readiness Probe → "Is the app ready to serve traffic?"
 3. Liveness Probe (very important)
 Purpose:
 Detect if the container is broken and needs restart
+Suppose that a Pod is running our application inside a container, but due to some reason let’s say memory leak, cpu usage, application deadlock etc the
+application is not responding to our requests, and stuck in error state.
+Liveness probe checks the container health as we tell it do, and if  some reason the liveness probe fails, it restarts the container.
 What happens if it fails?
 Fail → Kubernetes restarts container
 Example
@@ -33,6 +36,8 @@ Like:
 "Is the person alive? If not → call ambulance (restart)"
 
 4. Readiness Probe
+This type of probe is used to detect if a container is ready to accept traffic. You can use this probe to manage which pods are used as backends for load balancing services. 
+If a pod is not ready,  then be removed from the list of load balancers.
 Purpose:
 Check if app is ready to receive traffic
 What happens if it fails?
@@ -53,11 +58,12 @@ Like:
 If not → don’t assign tasks (no traffic)
 
 5. Key difference (VERY IMPORTANT)
-Feature	Liveness	Readiness
-Purpose	Detect crash/stuck app	Check if ready for traffic
-On failure	Restart container	Remove from service
-Traffic impact	Indirect	Direct
-Use case	Deadlocks, crashes	Startup, DB dependency
+| Feature        | Liveness               | Readiness                  |
+| -------------- | ---------------------- | -------------------------- |
+| Purpose        | Detect crash/stuck app | Check if ready for traffic |
+| On failure     | Restart container      | Remove from service        |
+| Traffic impact | Indirect               | Direct                     |
+| Use case       | Deadlocks, crashes     | Startup, DB dependency     |
 
 6. Types of probes
 Kubernetes supports 3 types:
