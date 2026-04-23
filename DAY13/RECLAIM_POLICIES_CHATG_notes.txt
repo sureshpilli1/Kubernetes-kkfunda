@@ -1,0 +1,173 @@
+Reclaim policies
+----------------
+Retain: When a PV is released from a PVC with a "Retain" reclaim policy, the volume is not automatically deleted. 
+Instead, it remains in the cluster in a released state. The underlying storage is preserved, allowing you to manually reclaim or manage the data.
+ --> Default Reclaim policy 
+
+Delete: With the "Delete" reclaim policy, when a PVC is deleted, the associated PV is also deleted, along with the underlying storage. 
+This means that all data is lost.
+
+Recycle(Deprecated): The "Recycle" policy allowed for a PV to be scrubbed (data deleted) and then made available again when released. 
+However, this feature has been deprecated in favor of more explicit data management practices. 
+
+
+this is a key storage concept that ties PV/PVC lifecycle together. I’ll explain:
+Reclaim policies (what happens to storage after PVC is deleted)
+PV states (Available, Bound, Released, etc.) and how they change
+1. Reclaim Policy (core idea)
+A reclaim policy tells Kubernetes:
+“What should I do with the underlying storage when the PVC is deleted?”
+It is defined on the PersistentVolume (PV).
+Where it appears
+spec:
+  persistentVolumeReclaimPolicy: Retain | Delete | Recycle
+2. Types of reclaim policies
+1. Retain (most important)
+Meaning:
+“Keep the data. Do NOT delete storage.”
+What happens?
+PVC deleted
+   ↓
+PV becomes "Released"
+   ↓
+Data still exists on storage
+   ↓
+Manual cleanup required
+Use cases
+Production databases (MongoDB, MySQL)
+Critical data
+Important
+PV will NOT be reused automatically
+Admin must:
+Clean data manually
+Rebind if needed
+
+2. Delete
+Meaning:
+“Delete the storage completely”
+What happens?
+PVC deleted
+   ↓
+PV deleted
+   ↓
+Underlying storage (EBS, disk, etc.) deleted
+Use cases
+Temporary environments
+Dev/test workloads
+Dynamic provisioning (very common in cloud)
+
+3. Recycle (deprecated )
+Meaning:
+“Delete data inside volume, keep volume”
+What happens?
+PVC deleted
+   ↓
+Data wiped (rm -rf)
+   ↓
+PV becomes Available again
+Status
+Deprecated (not recommended now)
+Replaced by dynamic provisioning
+
+3. Summary of reclaim policies
+| Policy  | Data      | PV      | Use case   |
+| ------- | --------- | ------- | ---------- |
+| Retain  | Kept      | Stays   | Production |
+| Delete  | Deleted   | Removed | Dev/Test   |
+| Recycle | Cleaned   | Reused  | Deprecated |
+
+4. PV Lifecycle States (VERY IMPORTANT)
+A PersistentVolume goes through different states.
+Main states
+Available → Bound → Released → Available (or Failed)
+
+1. Available
+Meaning:
+“PV is free and ready to be used”
+When?
+Just created
+No PVC attached
+Example:
+PV created
+   ↓
+State = Available
+
+2. Bound
+Meaning:
+“PV is currently used by a PVC”
+When?
+PVC created
+   ↓
+Matched with PV
+   ↓
+State = Bound
+Important:
+PVC ↔ PV (1:1 binding)
+
+3. Released
+Meaning:
+“PVC is deleted, but PV still exists”
+When?
+PVC deleted
+   ↓
+PV still holds old data
+   ↓
+State = Released
+Important:
+Data still exists
+PV is NOT reusable automatically (especially with Retain)
+
+4. Failed (rare)
+Meaning:
+“Something went wrong with volume”
+Example:
+Mount failure
+Storage backend issue
+
+5. Full lifecycle example (your MongoDB case)
+Step 1: Create PV
+State → Available
+Step 2: Create PVC
+PVC binds PV
+State → Bound
+Step 3: Pod uses PVC
+Pod running with storage
+State → Bound
+Step 4: Delete PVC
+Depends on reclaim policy:
+If Retain
+PVC deleted
+   ↓
+PV → Released
+   ↓
+Data still in NFS
+If Delete
+PVC deleted
+   ↓
+PV deleted
+   ↓
+Storage removed
+
+6. Visual flow
+[Available]
+     ↓ (PVC created)
+[Bound]
+     ↓ (PVC deleted)
+[Released]
+     ↓ (manual or reclaim action)
+[Available / Deleted]
+
+7. Key real-world insight (DevOps level)
+Most common setup:
+Cloud (AWS/GCP) → Delete
+On-prem (NFS, manual storage) → Retain
+
+8. Common mistakes
+Using Delete for production DB
+Forgetting cleanup in Retain
+Expecting Released PV to auto-bind again
+Not understanding data still exists after PVC deletion
+Final summary
+Reclaim policy = what happens to storage after PVC deletion
+PV states = lifecycle of volume
+Available → Bound → Released
