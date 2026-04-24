@@ -124,11 +124,13 @@ Cloud integration
 Auto-create cloud disks
 
 9. Key differences (Static vs Dynamic)
-Feature	Static	Dynamic
-PV creation	Manual	Automatic
-Effort	High	Low
-Scalability	Low	High
-Use case	Small setups	Production
+| Feature     | Static       | Dynamic    |
+| ----------- | ------------ | ---------- |
+| PV creation | Manual       | Automatic  |
+| Effort      | High         | Low        |
+| Scalability | Low          | High       |
+| Use case    | Small setups | Production |
+
 
 10. Common mistakes
 Forgetting storageClassName
