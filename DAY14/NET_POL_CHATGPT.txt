@@ -5,9 +5,7 @@ Network Policies
 
 Key Concepts of Network Policies
 Namespaces: Network Policies are applied within a specific namespace. You can create different policies for different namespaces.
-
 Selectors: Network Policies use selectors to define the pods they apply to:
-
 Pod Selector: Specifies which pods the policy affects.
 Namespace Selector: Specifies which namespaces the policy can affect.
 
