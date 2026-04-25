@@ -1,0 +1,644 @@
+Network Policies
+--> Network Policies in Kubernetes are used to control the communication between pods and   external endpoints. 
+--> They are a way to define rules that govern how pods can connect to each other and to other network endpoints. 
+--> This can enhance the security of your applications by restricting access and ensuring that only authorized traffic is allowed.
+
+Key Concepts of Network Policies
+Namespaces: Network Policies are applied within a specific namespace. You can create different policies for different namespaces.
+
+Selectors: Network Policies use selectors to define the pods they apply to:
+
+Pod Selector: Specifies which pods the policy affects.
+Namespace Selector: Specifies which namespaces the policy can affect.
+
+Types of Rules:
+	Ingress Rules: Control incoming traffic to the selected pods.
+	Egress Rules: Control outgoing traffic from the selected pods.
+Policy Types: Each Network Policy can specify rules for ingress, egress, or both.
+
+
+
+CHATGPTNOTES:
+
+1. What is a NetworkPolicy?
+A NetworkPolicy is:
+A Kubernetes resource that controls traffic (ingress/egress) to Pods
+Simple idea
+Without NetworkPolicy → Everything can talk to everything 
+With NetworkPolicy    → Only allowed traffic is permitted
+
+2. Important prerequisite (very important)
+NetworkPolicies work only if your CNI supports it
+Examples:
+Calico ✔
+Cilium ✔
+Weave ✔
+Flannel (basic, no policy support)
+
+3. Types of traffic control
+Ingress
+Incoming traffic to Pod
+Egress
+Outgoing traffic from Pod
+
+4. Basic structure
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: example
+  namespace: prod
+spec:
+  podSelector:
+    matchLabels:
+      app: mongodb
+
+  policyTypes:
+  - Ingress
+  - Egress
+
+5. Key concept (VERY IMPORTANT)
+NetworkPolicy works on:
+Pod labels (NOT Services, NOT Deployments)
+
+6. Default behavior
+If NO NetworkPolicy exists:
+All traffic is allowed 
+If NetworkPolicy exists:
+Only defined traffic is allowed
+Everything else is blocked 
+
+7. Example 1: Allow only Spring app → MongoDB
+Goal
+Only allow traffic from:
+springapp → mongodb
+Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-spring-to-mongo
+  namespace: prod
+spec:
+  podSelector:
+    matchLabels:
+      app: mongodb
+
+  policyTypes:
+  - Ingress
+
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: springapp
+    ports:
+    - protocol: TCP
+      port: 27017
+What this does
+Spring Pod → MongoDB Pod → ALLOWED 
+Other Pods → MongoDB → BLOCKED 
+
+8. Example 2: Deny all traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all
+  namespace: prod
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+Meaning:
+No Pod can receive traffic 
+
+9. Example 3: Allow all (explicit)
+ingress:
+- {}
+Means:
+Allow all traffic
+
+10. Egress example (important)
+Allow MongoDB to access DNS only
+egress:
+- to:
+  - namespaceSelector: {}
+  ports:
+  - port: 53
+
+11. Key components explained
+podSelector
+podSelector:
+  matchLabels:
+    app: mongodb
+Which Pods this policy applies to
+ingress.from
+from:
+- podSelector:
+    matchLabels:
+      app: springapp
+Who is allowed
+ports
+ports:
+- port: 27017
+Which port is allowed
+namespaceSelector
+Allow from entire namespace
+
+12. Visual understanding
+[Spring Pod] ----> [MongoDB Pod]
+       allowed
+
+[Other Pod] ----> [MongoDB Pod]
+       blocked
+
+13. Important behavior (must know)
+Policies are additive
+Multiple policies = combined rules
+No deny rules exist 
+Only allow rules
+
+14. Real-world use cases
+Microservices security
+Frontend → Backend only
+Backend → DB only
+Zero trust networking
+Deny everything by default
+Allow specific traffic
+Multi-tenant clusters
+Isolate teams
+
+15. Common mistakes
+Forgetting labels
+Wrong namespace
+Expecting it to work without supported CNI
+Thinking Services are controlled (they are not directly)
+
+16. One-line memory
+NetworkPolicy = Firewall for Pods
+Final summary
+Controls Pod-to-Pod traffic
+Uses labels
+Works only with supported CNI
+Default allow → becomes restricted once policy applied
+
+
+
+notes explaination by the chatgpt:
+1. Before applying NetworkPolicy (default behavior)
+You created 3 apps:
+Components
+MongoDB (with Service: mongosvc)
+Spring App
+Java Web App
+Nginx (in default namespace)
+What happens by default?
+No NetworkPolicy → Kubernetes allows ALL traffic
+Your tests
+Step 1: From Java Web App
+curl -v telnet://mongosvc:27017
+Connected
+Step 2: From Spring App
+curl -v telnet://mongosvc:27017
+Connected
+Step 3: From Nginx (different namespace)
+curl -v telnet://mongosvc.prod.svc.cluster.local:27017
+Connected
+Key understanding
+ANY Pod → MongoDB → Allowed (no restrictions)
+
+2. Now you apply NetworkPolicy (Example 2)
+podSelector:
+  matchLabels:
+    app: mongodb
+This means:
+"This policy applies to MongoDB Pods"
+policyTypes
+policyTypes:
+- Ingress
+Only incoming traffic is controlled
+ingress rule
+ingress:
+- from:
+  - podSelector:
+      matchLabels:
+        app: springapp
+Meaning:
+Only Pods with label app=springapp can access MongoDB
+ports
+ports:
+- port: 27017
+Only MongoDB port is allowed
+
+3. After applying NetworkPolicy
+Now behavior changes:
+Spring App → MongoDB
+ALLOWED
+Because:
+springapp matches allowed podSelector
+Java Web App → MongoDB
+BLOCKED 
+Because:
+javawebapp NOT in allowed list
+Nginx → MongoDB
+BLOCKED 
+Because:
+Different namespace
+Not allowed in policy
+Key concept
+Once NetworkPolicy is applied:
+Default = DENY (for selected Pods)
+
+4. Why only MongoDB is restricted?
+Because:
+podSelector:
+  matchLabels:
+    app: mongodb
+Policy applies ONLY to MongoDB Pods
+Other Pods (Spring, Java) are still open
+
+5. Now you modified policy
+- podSelector:
+    matchLabels:
+      app: javawebapp
+Now allowed:
+Spring App → MongoDB 
+Java App → MongoDB 
+
+6. NamespaceSelector addition
+- namespaceSelector:
+    matchLabels:
+      ns: test-ns
+Meaning:
+Allow traffic from ALL Pods in that namespace
+Important
+Namespace must have label:
+kubectl label ns test-ns ns=test-ns
+
+7. Example 1 (advanced policy explanation)
+This one is more complex:
+ipBlock
+ipBlock:
+  cidr: 172.17.0.0/16
+  except:
+  - 172.17.1.0/24
+Meaning:
+Allow traffic from:
+172.17.0.0 → 172.17.255.255
+Except:
+172.17.1.0 → 172.17.1.255
+namespaceSelector
+namespaceSelector:
+  matchLabels:
+    project: myproject
+Allow traffic from Pods in that namespace
+podSelector
+podSelector:
+  matchLabels:
+    role: frontend
+Allow specific Pods
+ports
+port: 6379
+Only that port allowed
+egress
+egress:
+- to:
+  - ipBlock:
+      cidr: 10.0.0.0/24
+Outgoing traffic restriction
+
+8. Final behavior summary
+Before NetworkPolicy
+All Pods → MongoDB → Allowed
+After NetworkPolicy
+Only allowed Pods → MongoDB → Allowed
+Others → BLOCKED
+
+9. Important learning points
+1. NetworkPolicy works on labels
+Not Services
+2. Default becomes DENY
+Once policy applied
+3. Only selected Pods are affected
+podSelector:
+  app: mongodb
+4. Rules are ALLOW only
+No explicit deny
+5. Namespace matters
+Cross-namespace traffic is blocked unless allowed
+
+10. Real-world architecture mapping
+Frontend → Backend → Database
+   ✔         ✔         ✔
+
+Other Pods → Database
+   BLOCKED
+Final one-line summary
+NetworkPolicy turns your cluster from "open network" → "controlled firewall"
+
+
+
+examples copied from notes: 
+
+Example without network policies
+=================================
+
+mongo db and service
+--------------------
+
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata: 
+  name: mongodb
+  namespace: prod
+spec:
+  replicas: 1
+  selector: 
+    matchLabels:
+      app: mongodb
+  template:
+    metadata:
+      labels:
+        app: mongodb
+    spec:
+      containers:
+      - name: mongocon
+        image: mongo
+        ports:
+        - containerPort: 27017
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: devdb
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          value: devdb@123
+        volumeMounts:
+        - name: mongovol
+          mountPath: /data/db
+      volumes:
+      - name: mongovol
+        hostPath:
+          path: /mongodata
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongosvc
+  namespace: prod
+spec:
+  type: ClusterIP
+  selector:
+    app: mongodb
+  ports:
+    - port: 27017
+      targetPort: 27017
+
+
+
+
+
+
+
+
+spring app and service
+----------------------
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sprinapp
+  namespace: prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: springapp
+  template:
+    metadata:
+      labels:
+        app: springapp
+    spec:
+      containers:
+      - name: springapp
+        image: kkeducation12345/spring-app:1.0.0
+        ports:
+        - containerPort: 8080
+        env:
+        - name: MONGO_DB_HOSTNAME
+          value: mongosvc
+        - name: MONGO_DB_USERNAME
+          value: devdb
+        - name: MONGO_DB_PASSWORD
+          value: devdb@123
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: springappsvc
+  namespace: prod
+spec:
+ type: NodePort
+ selector:
+   app: springapp
+ ports:
+ - port: 80
+   targetPort: 8080
+   
+
+maven-web-app and service
+-------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: javawebappdep
+  namespace: prod
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: javawebapp
+  template:
+    metadata:
+      name: javawebapp
+      labels:
+        app: javawebapp
+    spec:
+      containers:
+      - name: javawebapp
+        image: kkeducation123456/maven-web-app:1.2
+        ports:
+        - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: javawebappsvc
+  namespace: prod
+spec:
+  type: NodePort
+  selector:
+    app: javawebapp
+  ports:
+  - port: 80
+    targetPort: 8080
+
+
+========================================
+
+step 1:
+    kubectl exec -it javawebappdep-95fd6f796-bjsbs -n test-ns -- bash
+
+
+   curl -v telnet://mongosvc:27017   --> connected
+
+
+
+step 2:
+
+    kubectl exec -it sprinapp-6c6b6dfbbb-94qdr -n test-ns -- sh
+
+    apk add curl
+
+    curl -v telnet://mongosvc:27017
+
+step 3:
+    deploy nginx in default ns and check the connectivity
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+    ports:
+    - containerPort: 80
+
+
+
+kubectl exec -it nginx -- bash
+
+curl -v telnet://mongosvc.prod.svc.cluster.local:27017   --> fully qualified domain name
+
+
+==================================
+
+--> Now apply the networkPolicies
+
+Example 1:
+----------
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: test-network-policy
+  namespace: prod
+spec:
+  podSelector:
+    matchLabels:
+      app: springapp
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - ipBlock:
+        cidr: 172.17.0.0/16
+        except:
+        - 172.17.1.0/24
+    - namespaceSelector:
+        matchLabels:
+          project: myproject
+    - podSelector:
+        matchLabels:
+          role: frontend
+    ports:
+    - protocol: TCP
+      port: 6379
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 10.0.0.0/24
+    ports:
+    - protocol: TCP
+      port: 5978
+
+
+Example 2: for our application
+----------
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: test-network-policy
+  namespace: prod
+spec:
+  podSelector:
+    matchLabels:
+      app: mongodb
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: springapp
+    ports:
+    - protocol: TCP
+      port: 27017
+
+kubectl apply -f networkpol.yaml
+kubectl get netpol
+kubectl get netpol  -n test-ns
+
+
+trouble shooting
+----------------
+
+ kubectl exec -it sprinapp-6c6b6dfbbb-94qdr -n test-ns -- sh
+
+ curl -v telnet://mongosvc:27017   --> connection is there
+
+
+  kubectl exec -it javawebappdep-95fd6f796-bjsbs -n test-ns -- bash
+
+  curl -v telnet://mongosvc:27017 ---> no connection
+
+
+NOTE: please add one more app pod label and check
+
+     app=javawebapp
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: test-network-policy
+  namespace: test-ns
+spec:
+  podSelector:
+    matchLabels:
+      app: mongodb
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: springapp
+    - podSelector:
+        matchLabels:
+          app: javawebapp
+    ports:
+    - protocol: TCP
+      port: 27017
+
+kubectl apply -f networkpol.yaml
+kubectl get netpol
+kubectl get netpol  -n test-ns
+
+
+NOTE: add nameSpace slector and check the connection
+
+
+   - namespaceSelector:
+	matchLabels:
+	 ns=test-ns
+
