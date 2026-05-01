@@ -242,13 +242,11 @@ Step 1 & 2: Install tools
 kubectl → talk to Kubernetes
 aws cli → talk to AWS
 These are just tools (no permissions yet)
-
 Step 3: Create IAM user
 You created:
 Access Key
 Secret Key
 This is your AWS identity
-
 Step 4: Configure AWS CLI
 aws configure
 Stores credentials locally
@@ -266,7 +264,6 @@ Because:
 IAM access ≠ Kubernetes access
 You can connect to cluster but:
 You are NOT authorized inside Kubernetes
-
 Step 5 & 6: aws-auth ConfigMap (VERY IMPORTANT)
 What is aws-auth?
 Special ConfigMap in EKS:
@@ -281,6 +278,7 @@ IAM user (prasanth)
 But still no access?
 Yes, because:
 User is identified, but has NO permissions yet
+
 3. Now RBAC comes into picture
 Core RBAC components
 Role
@@ -298,6 +296,7 @@ Cluster-wide permissions
 ClusterRoleBinding
 Connects:
 User → ClusterRole (cluster-wide)
+
 4. Your Role example explained
 kind: Role
 namespace: default
@@ -327,6 +326,7 @@ RoleBinding → namespace: prod
 This will NOT work 
 Correct rule
 Role and RoleBinding must be in SAME namespace
+
 5. ClusterRole example (full access)
 kind: ClusterRole
 Rules
@@ -343,6 +343,7 @@ RoleRef
 name: fullaccesscr
 Meaning
 User kkfunda → gets full cluster admin access
+
 6. Complete flow (VERY IMPORTANT)
 Step-by-step:
 1. IAM user created
