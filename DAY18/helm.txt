@@ -1,20 +1,18 @@
-
-
 Helm in k8s
 ===========
 Helm is a package manager for Kubernetes applications that helps you define, install, and manage Kubernetes applications similar to yum/apt for linux distributions. 
-
-
 It uses a concept called "charts" to package all the resources(pod,rs,deploy,pv,pvc.....) needed for an application into a single unit. Here’s a detailed breakdown of Helm and its components:
-
 
 1. Key Concepts
 ---------------
-Charts: A Helm chart is a collection of files that describe a related set of Kubernetes resources. Each chart contains templates for Kubernetes manifests, a Chart.yaml file (metadata), and optionally a values.yaml file for configuration.
+Charts: A Helm chart is a collection of files that describe a related set of Kubernetes resources. 
+Each chart contains templates for Kubernetes manifests, a Chart.yaml file (metadata), and optionally a values.yaml file for configuration.
 
-Releases: A release is an instance of a chart running in a Kubernetes cluster. When you install a chart, you create a release. Each release can have multiple versions, and you can upgrade or roll back to previous versions.
+Releases: A release is an instance of a chart running in a Kubernetes cluster. 
+When you install a chart, you create a release. Each release can have multiple versions, and you can upgrade or roll back to previous versions.
 
-Repository: Helm charts can be stored in repositories, which are collections of charts. You can create your own chart repositories or use public ones like the official Helm Hub or Artifact Hub.
+Repository: Helm charts can be stored in repositories, which are collections of charts. 
+You can create your own chart repositories or use public ones like the official Helm Hub or Artifact Hub.
 
 
 2. Architecture
