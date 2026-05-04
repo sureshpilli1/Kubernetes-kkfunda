@@ -244,7 +244,8 @@ kubectl describe po <pod-name> --> to see the updated values
 
 
 
---> To deploy your Kubernetes resources as a Helm chart, you'll need to create a basic Helm chart structure. Here’s a step-by-step guide to help you set up your Helm chart with the provided Deployment and Service configurations.
+--> To deploy your Kubernetes resources as a Helm chart, you'll need to create a basic Helm chart structure. 
+Here’s a step-by-step guide to help you set up your Helm chart with the provided Deployment and Service configurations.
 
 
 Step 1: Create a Helm Chart
@@ -478,10 +479,13 @@ Same chart → different environments → different values
 Add repo
 helm repo add metrics-server https://kubernetes-sigs.github.io/metrics-server/
 Register external charts
+
 Search chart
 helm search repo metrics-server
+
 View default values
 helm show values metrics-server/metrics-server
+
 View templates
 helm template metrics-server/metrics-server
 Shows generated YAML without deploying
