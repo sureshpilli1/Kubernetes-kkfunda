@@ -1,0 +1,268 @@
+Introduction
+In this blog, we’ll walk through how to deploy a Spring Boot application connected to MongoDB into an AWS EKS (Elastic Kubernetes Service) cluster using a Jenkins Pipeline. 
+We’ll start by launching an EC2 instance, install Jenkins, and set up all the necessary tools like AWS CLI, kubectl, and eksctl. 
+From there, we'll create an EKS cluster, configure Jenkins to authenticate with AWS, and automate the entire Kubernetes deployment process using a Jenkins pipeline. 
+By the end, you’ll be able to see your Spring Boot app running live on a LoadBalancer URL—fully automated from GitHub to Kubernetes!
+
+1. Launch Ubuntu Server (t2.large)
+I started by launching a t2.large EC2 instance with the Ubuntu Server image from AWS.
+Instance Type: t2.large or t3.large (2 vCPU, 8 GB RAM)
+vi jenkins.sh # Run this script in root user (sudo su -)
+
+#!/bin/bash
+sudo apt update -y
+#sudo apt upgrade -y
+wget -O - https://packages.adoptium.net/artifactory/api/gpg/key/public | tee /etc/apt/keyrings/adoptium.asc
+echo "deb [signed-by=/etc/apt/keyrings/adoptium.asc] https://packages.adoptium.net/artifactory/deb $(awk -F= '/^VERSION_CODENAME/{print$2}' /etc/os-release) main" | tee /etc/apt/sources.list.d/adoptium.list
+sudo apt update -y
+sudo apt install temurin-17-jdk -y
+/usr/bin/java --version
+curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | sudo tee \
+                  /usr/share/keyrings/jenkins-keyring.asc > /dev/null
+echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
+                  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+                              /etc/apt/sources.list.d/jenkins.list > /dev/null
+sudo apt-get update -y
+sudo apt-get install jenkins -y
+sudo systemctl start jenkins
+sudo systemctl status jenkins
+
+Run this script in root user (sudo su -)
+Once Jenkins is installed, you’ll need to allow traffic on port 8080 the default port Jenkins uses for its web interface.
+sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+
+2. You can set up and manage the EKS cluster from your Jenkins-installed server itself.
+Here's What You Need to Install (on that Jenkins server):
+AWS CLI – to communicate with your AWS account
+kubectl – to manage your Kubernetes cluster
+eksctl – to create and manage the EKS cluster
+aws configure – to set up your credentials
+(Access key, Secret key, Region, Output format)
+Step 1: Install AWS CLI
+sudo apt update
+sudo apt install unzip curl -y
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+unzip awscliv2.zip
+sudo ./aws/install
+Check installation
+aws --version
+
+Step 2: Configure AWS Credentials
+how to generate credentials we will see
+aws configure
+Enter the following:
+Access Key ID
+Secret Access Key
+Default region (e.g. ap-south-1)
+Output format : table
+
+Step 3: Install kubectl
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+curl -LO ... downloads the latest stable version of kubectl from the Kubernetes website.
+sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl moves kubectl to the /usr/local/bin/ directory with appropriate permissions.
+Check version
+kubectl version --client
+
+Step 4:Install eksctl
+curl -LO "https://github.com/eksctl-io/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz"
+tar -xzf eksctl_Linux_amd64.tar.gz
+sudo mv eksctl /usr/local/bin/
+eksctl version
+Check the version
+eksctl version
+
+3. Create an EKS Cluster using eksctl
+eksctl create cluster \
+--name my-cluster \
+--region ap-south-1 \
+--nodegroup-name mynodes \
+--node-type t3.medium \
+--nodes 2 \
+--nodes-min 2 \
+--nodes-max 3 \
+--managed
+What this does:
+Creates a managed EKS cluster named my-cluster in the Mumbai region (ap-south-1)
+Adds a managed node group called mynodes
+Uses t3.medium EC2 instances
+Starts with 2 nodes and allows scaling up to 3
+This creates the following resources when you run eksctl create cluster:
+VPC (Virtual Private Cloud)
+A private network where your entire EKS infrastructure lives.
+Subnets & Route Tables
+Public and private subnets are created with routing rules.
+Public subnets allow access to the internet (e.g., for Load Balancers).
+Private subnets are used for internal communication (e.g., between pods and worker nodes).
+Internet Gateway
+Attached to the public subnets, this enables the cluster to access the internet (like pulling Docker images or updates).
+NAT Gateway (optional)
+Allows private subnets (e.g., worker nodes) to securely access the internet.
+Security Groups
+Act like firewalls control which ports are open (like 443 for API server, 22 for SSH).
+Includes ingress rules (incoming) and egress rules (outgoing).
+EKS Control Plane
+AWS-managed Kubernetes control plane that handles the API server, scheduler, etc.
+You don’t manage this manually AWS runs it for you.
+EC2 Worker Nodes (Node Group)
+These are actual EC2 instances created inside the private subnets.
+Your application pods run on these nodes.
+IAM Roles & Policies
+Automatically created for EKS to securely access and control AWS services.
+CloudFormation Stacks
+You can watch all these resources being created in CloudFormation Console
+Go to CloudFormation > Stacks
+Click on each stack to open and explore the Events tab,
+Where you can watch step-by-step logs like "Creating VPC", "Creating Subnets", "Creating NodeGroup", etc
+In the Resources tab, you’ll see all the AWS components being provisioned such as Internet Gateways, Route Tables, Security Groups, EC2 Instances, IAM Roles, and more.
+Check if Cluster is Created
+Run this command to list all EKS clusters:
+You should see my-cluster in the output.
+aws eks list-clusters
+Check kubeconfig File
+cat /home/ubuntu/.kube/config
+This file contains the cluster connection details used by kubectl.
+This command displays the contents of the kubeconfig file, which is used by kubectl to manage your Kubernetes cluster.
+Check Worker Nodes
+kubectl get nodes
+You should see 2 EC2 worker nodes in "Ready" status.
+This confirms the worker nodes joined the cluster.
+Check Namespaces
+kubectl get namespaces
+Default Kubernetes namespaces should appear:
+
+4 .Check the EKS Cluster in AWS Console
+Go to AWS Console
+Search for “EKS” service
+Click on your cluster: my-cluster
+Click the “Compute” tab
+Here you’ll see:
+The node group (mynodes)
+EC2 instances created
+Scaling status
+
+5. Configure Jenkins for Kubernetes
+1. Install the Required plugins:
+AWS Credentials Plugin
+Kubernetes Plugin
+Kubernetes CLI Plugin
+Kubernetes Credentials
+Stage view
+To interact with an EKS cluster from Jenkins, you typically need to AWS Credentials Plugin
+2. Add AWS Credentials in Jenkins
+Why Add AWS Credentials in Jenkins?
+Jenkins doesn't know your AWS credentials by default.
+This injects AWS credentials temporarily into your Jenkins shell can authenticate securely with AWS and Kubernetes.
+Go to Manage Jenkins page, click on "Manage Credentials”
+Now, under (global) or in a specific domain if required, click on (Global credentials)
+Credentials → (Global) → Add Credentials
+Select the AWS Credentials Type:
+In the Kind dropdown, select "AWS Credentials".
+Fill in the AWS Credentials:
+ID: Provide a unique name for the credentials (e.g., aws-eks-cred).
+Access Key ID: Enter your AWS_ACCESS_KEY_ID.
+Secret Access Key: Enter your AWS_SECRET_ACCESS_KEY.
+This is used in the withCredentials block in the pipeline.
+
+6. Create a New Job in Jenkins for Kubernetes Deployment
+Now let’s create a pipeline job for your EKS deployment:
+Go to Jenkins Dashboard
+Click New Item
+Enter any job name, example: k8s deployment
+Select Pipeline → Click OK
+
+7. Start writing Pipeline
+1. Git Checkout
+Now here Jenkins is cloning the code from GitHub repo exactly from the feature branch.
+2. Setup AWS + KubeConfig
+Here Jenkins is injecting AWS credentials that we already stored with ID aws-eks-cred.
+This contains Access Key + Secret Key securely stored in Jenkins credentials.
+Connects Jenkins to your EKS cluster using AWS CLI
+Generates or updates .kube/config file so that kubectl can talk to the EKS control plane.
+3.Deploy to Kubernetes
+Important: YAML File Must Be Correct
+The file springappmongo.yaml is:
+Already present inside the GitHub repository
+This file is the blueprint for your Kubernetes deployment.
+This YAML Defines:
+Deployment
+It tells Kubernetes how to create pods for your Spring Boot + MongoDB application.
+Example: number of replicas, container image, ports.
+Service
+It exposes your application so it can be accessed.
+If it’s a LoadBalancer type, AWS will create an ELB for you.
+Note : If the filename is wrong or not present in the repo, the pipeline will fail
+The --validate=false flag is used to skip any API schema checks just apply and go.
+This step actually creates the Kubernetes pods and services in your EKS environment."
+
+4. Verify Pods and Service
+Once deployed, we use kubectl get pods to check if the application is running and kubectl get svc to verify if a LoadBalancer or ClusterIP service is created.
+8. Full pipeline
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout from GitHub') {
+            steps {
+                git branch: 'feature', 
+                    url: 'https://github.com/KandlaguntaVenkataSivaNiranjanReddy/spring-boot-mongo-docker-kkfunda.git'
+            }
+        }
+
+        stage('Setup KubeConfig') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
+                                  credentialsId: 'aws-eks-cred']]) {
+                    sh '''
+                        aws eks update-kubeconfig --region ap-south-1 --name my-cluster
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
+                                  credentialsId: 'aws-eks-cred']]) {
+                    sh '''
+                        kubectl apply -f springappmongo.yaml --validate=false
+                    '''
+                }
+            }
+        }
+
+        stage('Verify Pods and Services') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding',
+                                  credentialsId: 'aws-eks-cred']]) {
+                    sh '''
+                        kubectl get pods
+                        kubectl get svc
+                    '''
+                }
+            }
+        }
+    }
+}
+
+9.Run the Jenkins Job
+Once the pipeline is set up, go ahead and click “Build Now” in Jenkins.
+In the console output, you’ll see:
+Now you can see Jenkins first pulling the source code from our GitHub repository, specifically the feature branch. This is our application code for Spring Boot with MongoDB.
+Jenkins is securely injecting our AWS credentials
+Now look Jenkins is updating the kubeconfig file .This connects kubectl to our EKS cluster without this, Jenkins can't run K8s commands.
+Now Jenkins is deploying the application by running:
+kubectl apply -f springappmongo.yaml
+This file has all our K8s objects like the Deployment and Service definitions
+Jenkins is verifying everything by listing Pods and Services.
+It runs:
+kubectl get pods to see if the app is running
+kubectl get svc to see if the LoadBalancer service is ready”
+Even though Jenkins shows everything in the console output, it's a good habit to manually verify from your EC2 server terminal (Jenkins server)
+
+10. Access the Application
+Now, you can copy this LoadBalancer URL from the console, paste it into your browser.
+Now you can add users to your application.
+
+
+
