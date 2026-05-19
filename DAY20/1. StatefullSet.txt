@@ -1,5 +1,4 @@
-## 1. Key Differences Between Deployment and StatefulSet
-
+1. Key Differences Between Deployment and StatefulSet
 | Feature            | Deployment                            | StatefulSet                                 |
 | ------------------ | ------------------------------------- | ------------------------------------------- |
 | Pod Identity       | Random (no stable name or ID)         | Stable, predictable pod names (`pod-0`)     |
@@ -9,21 +8,15 @@
 | Headless Service   | Not required                          | Usually Required (for stable DNS)           |
 | Rolling Update     | Faster                                | Slower (ordered updates)                    |
 
----
-
-## 2. Solution Architecture
-
+2. Solution Architecture
 * MySQL StatefulSet
 * ConfigMap for MySQL Username
 * Secret for MySQL Password
 * Headless Service for stable DNS
 * PersistentVolumeClaim per Pod for MySQL data
 
----
-
-## 3. Complete YAML Setup
-
-### Step 1: ConfigMap (MySQL Username)
+3. Complete YAML Setup
+Step 1: ConfigMap (MySQL Username)
 
 ```yaml
 apiVersion: v1
@@ -33,11 +26,7 @@ metadata:
 data:
   MYSQL_USER: "myuser"
 ```
-
----
-
-### Step 2: Secret (MySQL Password)
-
+Step 2: Secret (MySQL Password)
 ```yaml
 apiVersion: v1
 kind: Secret
@@ -47,11 +36,7 @@ type: Opaque
 data:
   MYSQL_PASSWORD: bXlwYXNzd29yZA==
 ```
-
----
-
-### Step 3: Headless Service
-
+Step 3: Headless Service
 ```yaml
 apiVersion: v1
 kind: Service
@@ -64,11 +49,7 @@ spec:
   ports:
     - port: 3306
 ```
-
----
-
-### Step 4: StatefulSet with PVC
-
+Step 4: StatefulSet with PVC
 ```yaml
 apiVersion: apps/v1
 kind: StatefulSet
@@ -119,10 +100,7 @@ spec:
           storage: 1Gi
 ```
 
----
-
-## 4. How It Works
-
+4. How It Works
 | Component                  | Purpose                                                                        |
 | -------------------------- | ------------------------------------------------------------------------------ |
 | ConfigMap                  | Stores MySQL username                                                          |
@@ -131,51 +109,33 @@ spec:
 | StatefulSet                | Creates MySQL Pod with stable hostname and bound PVC                           |
 | PVC (volumeClaimTemplates) | Creates persistent storage automatically for MySQL data                        |
 
----
-
-## 5. Key Details
-
+5. Key Details
 MySQL Pod Stable Hostname:
-
 ```
 mysql-0.mysql-headless.default.svc.cluster.local
 ```
-
 PVC Name:
-
 ```
 mysql-persistent-storage-mysql-0
 ```
-
 Access MySQL Password in Pod:
-
 ```bash
 echo $MYSQL_PASSWORD
 ```
 
----
-
-## 6. How to Explain to Students
-
+6. How to Explain to Students
 MySQL cannot run with Deployment because it requires stable hostnames and persistent volumes.
 StatefulSet is the right choice for stateful applications like databases.
-
 ConfigMap stores non-sensitive information like username, while Secret safely holds the password.
 This ensures better security and flexibility in production.
 
----
-
-## 7. Troubleshooting Guide
-
+7. Troubleshooting Guide
 1. PVC Pending: Check StorageClass and provisioner.
 2. Pod CrashLoop: Verify passwords and environment variables.
 3. MySQL Connectivity Issues: Test DNS and service inside the cluster.
 4. Volume Issues: Inspect PVC events and Pod logs.
 
----
-
-## 8. Why This Setup Will Work in Production
-
+8. Why This Setup Will Work in Production
 * Secrets prevent hardcoded passwords.
 * Persistent volume storage is auto-provisioned.
 * MySQL 8.0 image tested and supported.
