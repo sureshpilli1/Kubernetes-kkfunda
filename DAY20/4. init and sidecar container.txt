@@ -286,13 +286,43 @@ Keep setup logic separate from application logic
 Final summary
 Databases need startup time because they initialize internally.
 
-👉 Init containers exist because:
-
+Init containers exist because:
 setup should be separated
 applications stay clean
 reusable preparation logic
 better security/debugging
 different tools/images can be used
-🔥 Final mental model
+Final mental model
 Init Container = Environment preparation
 Main Container = Actual application
+
+
+VERY IMPORTANT UNDERSTANDING
+An init container:
+CANNOT exist alone
+because:
+Init containers are part of a Pod
+Their purpose is:
+Prepare environment BEFORE main app starts
+So Kubernetes needs:
+init container
+main container
+inside same Pod.
+Full YAML
+apiVersion: v1
+kind: Pod
+metadata:
+  name: init-container-demo
+  namespace: test-ns
+
+spec:
+  containers:
+  - name: main-app
+    image: busybox
+    command: ['sh', '-c', 'echo Main App Running; sleep 3600']
+
+  initContainers:
+  - name: init-wait
+    image: busybox
+    command: ['sh', '-c', 'echo Init Task Starting; sleep 10; echo Init Task Done']
+
