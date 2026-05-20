@@ -55,3 +55,68 @@ which region has how many servers where are your customers are more
 
 scheduler user uses round Robin algorithm 
 EKS is service as platform provided by AWS
+
+
+
+
+
+CHATGPT NOTES:
+REST: Representational State Transfer.
+
+Common REST commands/methods
+
+| HTTP Method | Purpose        |
+| ----------- | -------------- |
+| GET         | Read           |
+| POST        | Create         |
+| PUT         | Replace/Update |
+| PATCH       | Partial update |
+| DELETE      | Delete         |
+
+
+Kubernetes examples:
+| kubectl command    | REST request |
+| ------------------ | ------------ |
+| kubectl get pods   | GET          |
+| kubectl apply      | POST         |
+| kubectl delete pod | DELETE       |
+| kubectl edit pod   | PATCH/PUT    |
+
+
+A REST command is:
+An HTTP request sent to a REST API to perform some operation.
+Simple understanding
+Remember:
+REST API = HTTP-based communication system
+A REST command means:
+Using HTTP methods like GET, POST, DELETE on URLs
+In Kubernetes
+The kube-apiserver exposes a REST API.
+So when you run:
+kubectl get pods
+kubectl actually sends a:
+GET request
+to the Kubernetes API Server.
+Real flow
+kubectl
+   ↓ REST request
+kube-apiserver
+   ↓
+etcd / scheduler / controller
+Example REST command in Kubernetes
+Command
+kubectl get pods
+Actual REST API call internally
+GET /api/v1/namespaces/default/pods
+Meaning
+Part	Meaning
+GET	Read data
+/pods	Pod resource
+Another example
+Create Pod
+kubectl apply -f pod.yaml
+Internally:
+POST /api/v1/namespaces/default/pods
+Meaning
+Method	Meaning
+POST	Create resource
