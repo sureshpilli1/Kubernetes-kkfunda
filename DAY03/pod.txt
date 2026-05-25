@@ -1,21 +1,13 @@
 what is a pod?
 ===============
---> A pod is the smallest building block or basic unit of scheduling in Kubernetes.
-
+--> A pod is the smallest building block or basic unit of scheduling in Kubernetes
 --> A Pod always runs on a Node.
-
 --> In a Kubernetes cluster, a pod represents a running process.
-
 --> Inside a pod, you can have one or more containers. Those containers all share a unique network IP, storage, network and any other specification applied to the pod.
-
 --> POD is a group of one or more containers which will be running on some node
-
 --> Each Pod has its unique IP Address within the cluster.
 
-
-
 Pod Lifecycle
--------------
 
 --> Make a Pod reuqest to API server using a local pod defination file
 --> The API server saves the info for the pod in ETCD
@@ -23,50 +15,26 @@ Pod Lifecycle
 --> Kubelet running on the node, sees the pod sheduled and fires up container-runtime.
 --> The entire lifecycle state of the pod is stored in ETCD.
 
-
-
 Pod Concepts
--------------
 --> Pod is ephemeral(lasting for a very short time) and won’t be rescheduled to a  new node once it dies.
 --> You should not directly create/use Pod for deployment, Kubernetes have  controllers like Replica Sets, Deployment, Deamon sets to keep pod alive.
 
 
-
-
 --> There are two model types of pod you can create:
-
-
 One-container-per-pod. 
-----------------------
 This model is  the most popular. POD is the “wrapper”  for a single container. Since pod is the  smallest object that K8S recognizes, it  manages the pods instead of directly  managing the containers.
 
-
 Multi-container-pod or Sidecar  containers 
-------------------------------------------
 In this model, a pod can hold  multiple co-located containers primary  container And utility container that  helps or enhances how an application  functions (examples of sidecar  containers are log shippers/watchers  and monitoring agents).
 
-
-
-
 How to list k8s objects?
--------------------------
-
 kubectl api-resources
-
 How to list namespace level objects?
-------------------------------------
-
 kubectl api-resources --namespaced=true
-
 How to list cluster level objects?
-----------------------------------
-
 kubectl api-resources --namespaced=false
 
-
-
 pod syntax
-===========
 
 apiVersion: v1
 kind: Pod
@@ -90,10 +58,7 @@ save: app1.yaml
 apply: kubectl apply -f app1.yaml
 
 
-
-
 EXAMPLE 1:
-===========
 
 apiVersion: v1
 kind: Pod
@@ -108,10 +73,7 @@ spec:
     - containerPort: 80
 
 
-
 Example 2:
-=========
-
 
 apiVersion: v1
 kind: Pod
@@ -127,13 +89,8 @@ spec:
     ports:
     - containerPort: 8080
 
-
-
-
-
-
 Example 3
-==========
+
 apiVersion: v1
 kind: Pod
 metadata: 
@@ -146,38 +103,17 @@ spec:
     ports:
     -  containerPort: 27017
 
-
-
-=================================================================
-
-
 kubectl describe po <podName> -n <NameSpace>
-
-
 IQ] Before starting pod , i need to do sanity how to do?
-
 Ans: kubectl apply -f abc.yaml -v=8
-
 IQ] in which worker node my pod is running how to check?
-
 Ans: kubectl get po -o wide
-
-
 IQ] what is the meaning of 1/1, 2/2, 1/2, 0/2 ?
-
 Ans:  1/1 means inside a pod we have a one container and that is running
-
       0/1 means inside a pod we have a one container and that is not running
-
-
-
-Assignment : pls create a pods 
-==========
-
+Assignment : pls create a pods
 tomcat
-
 Jenkins
-
 mongo
 
 
@@ -193,71 +129,52 @@ NOTES FROM BLOG:
 • Pods are always created inside a namespace for logical separation.
 • Pods are the actual running instances of your application.
 • Each Pod has a unique IP address within the cluster.
-
 Note : Normally, application pods do not run on the master (control plane) node.
 They only run on worker nodes.
-
 But some system pods (like DNS, networking, API server helpers, etc.) may run on the master
 node because Kubernetes itself needs them for management. These are part of the control
 plane or system namespaces (like kube-system).
-
 • Your app pods → run on worker nodes.
 • System/management pods → may run on master node (to keep the cluster working…)
 
 2. Where Pods Fit in the Kubernetes World
-
 1. Master Node / Control Plane
 The brain of Kubernetes – it has the scheduler, which plans and decides which worker node
 should run your pod.
-
 2. Worker Nodes
 The machines (virtual or physical) that actually run the pods assigned by the master.
-
 3. Kubelet
 A helper program on each worker node. It talks to the master, pulls the container images,
 starts the containers, and keeps checking that the pods are running properly.
-
 4. Container Runtime
 Software like Docker or containerd that actually runs the containers inside each pod.
 
 3. Pod Characteristics
-
 1. Smallest Unit
 ○ A Pod is the smallest thing you can create and run in Kubernetes.
-
 2. Contains Containers
 ○ A Pod can have one or more containers inside it.
 ○ Most of the time, it has only one container.
-
 3. Unique IP Address
 ○ Each Pod gets its own IP address in the cluster.
 ○ All containers inside the pod share that IP.
-
 4. Shared Network
 ○ Containers inside the same Pod can talk to each other using localhost.
-
 5. Shared Storage
 ○ Containers inside a Pod can use the same storage volumes.
-
 6. Ephemeral (Temporary)
 ○ Pods are not permanent.
 ○ If a pod dies, Kubernetes creates a new one, usually with a new IP.
-
 7. Namespace Scoped
 ○ Pods live inside a namespace (like dev, test, prod) for logical separation.
 
 4. Types of Pods
-
 a) Single-Container Pod
-
 • Only one container inside.
 • Example: Running just a web server.
-
 Understanding Kubernetes Pod YAML
-
 YAML is the way we tell Kubernetes what we want. Kubernetes then takes this YAML and makes it
 real in the cluster.
-
 Every Kubernetes YAML follows a similar structure:
 
 apiVersion: v1          # Which version of Kubernetes API to use
@@ -271,23 +188,18 @@ spec:                   # The "specification" of the Pod
       image: nginx:latest
       ports:
         - containerPort: 80
-
 Key Sections Explained
-
 1. apiVersion
 ○ Tells Kubernetes which version of the object definition to use.
 ○ For Pods → usually v1.
-
 2. kind
 ○ Defines what you’re creating.
 ○ Example: Pod, Deployment, Service, ConfigMap.
-
 3. metadata
 ○ Name, labels, and namespace.
 ○ Example:
 ○ name: my-first-pod → this pod’s name in the cluster.
 ○ namespace: default → lives in the default namespace.
-
 4. spec
 ○ The heart of the configuration.
 ○ Defines how the pod should run: containers, images, ports, volumes, etc.
@@ -296,46 +208,28 @@ Key Sections Explained
 ○ name → a unique name inside the pod
 ○ image → the container image (from Docker Hub or registry)
 ○ ports → which port this container listens on
-
 How Kubernetes Uses This YAML
-
 You apply the YAML:
-
 kubectl apply -f pod.yaml
-
-
 Kubernetes reads it and asks:
-
 • What kind (Pod)?
 • What’s the name (my-first-pod)?
 • What container(s) should I run (nginx:latest)?
-
 You can check it with:
-
 kubectl get pods
 kubectl get pods -n [namespace name]
-
-
 The scheduler finds a worker node to host the pod.
-
 The kubelet on that node pulls the image and starts the container.
-
 b) Multi-Container Pod
-
 A multi-container pod is a pod that runs two or more containers together.
 All containers in the pod share:
-
 • Network namespace → They can communicate via localhost and share the same IP/ports.
 • Storage volumes → They can read/write to the same mounted volumes.
 • Pod lifecycle → They start, stop, and restart together.
-
 Common Use Case: Sidecar Pattern
-
 The Sidecar Pattern pairs a main container with a helper container to add functionality without
 modifying the main app.
-
 Example:
-
 • Main App Container → Runs your primary application (e.g., web server, API).
 • Helper/Sidecar Container → Performs supporting tasks such as:
 • Log collection and shipping (e.g., Fluent Bit)
@@ -362,97 +256,62 @@ spec:
 
 
 5. Pod-to-Pod Communication
-
 • Same Node:
 Pods talk directly via their IPs no extra steps.
-
 • Different Nodes:
 Kubernetes uses a Cluster Network (e.g., Calico, Flannel, Cilium) to make sure pods can talk
 to each other even if they’re far apart in different machines.
-
 6. Pod Storage
-
 Containers are ephemeral if they restart, data inside disappears.
-
 Solution: Use Volumes.
-
 Common Volume Types:
-
 • emptyDir – Temporary storage; gone when the pod stops.
 • hostPath – Uses a folder from the host machine.
 • Persistent Volume (PV) – Storage that stays even if the pod is deleted.
-
 Tip: For databases or apps that store important data, always use Persistent Volumes.
 
 7. Pod Lifecycle
-
 1. Pending
-
 Pod is created but not yet scheduled or started.
-
 Possible scenarios:
-
 • No node has enough CPU or memory to host the pod.
 • Required Persistent Volume (PV) is not yet bound.
 • Container image is still downloading from the registry.
 • Scheduling constraints (e.g., nodeSelector, taints/tolerations) prevent placement.
-
 2. Running
-
 Pod has been scheduled to a node, and at least one container is running without issues.
-
 Possible scenarios:
-
 • Application is healthy and serving traffic normally.
 • Containers have passed readiness/liveness probes.
-
 3. Succeeded
-
 All containers in the pod have completed successfully and will not restart.
-
 Possible scenarios:
-
 • Batch job finished processing data with no errors.
 • One-off scripts executed to completion.
-
 4. Failed
-
 All containers have stopped, and at least one exited with a non-zero status.
-
 Possible scenarios:
-
 • Wrong command or arguments in the container entrypoint.
 • Application crashed due to missing files or misconfiguration.
 • Required services or dependencies were unavailable.
-
 5. CrashLoopBackOff
-
 Pod repeatedly fails, Kubernetes restarts it, but it keeps crashing.
-
 Possible scenarios:
-
 • Invalid credentials (e.g., DB connection fails due to wrong username/password).
 • Missing configMap or secret.
 • Port conflict (port already in use).
 • Application bug causing repeated crashes.
 • Out of Memory (OOMKilled) due to insufficient resources.
-
 6. Unknown
-
 Pod state can’t be determined because the Kubernetes API server has lost communication with
 the node where the pod was running.
-
 Possible scenarios:
-
 • Node is unreachable (network failure or shutdown).
 • Kubelet crash or kubelet is heavily overloaded and not reporting status.
 • Cloud node deleted/stopped (e.g., in AWS, GCP, or Azure).
 
-
 8. Deploying Pods
-
 You can create a pod directly, but in real-world projects, you usually use controllers:
-
 • Deployment – For apps that can have many copies (stateless).
 • StatefulSet – For apps that need a fixed identity (databases).
 • DaemonSet – Runs one copy of a pod on every node.
@@ -460,7 +319,6 @@ You can create a pod directly, but in real-world projects, you usually use contr
 Example Pod:
 
 9. Best Practices
-
 • Don’t run pods manually in production use Deployments/StatefulSets.
 • Add liveness and readiness probes to check health.
 • Keep pods small only related containers inside.
@@ -468,72 +326,47 @@ Example Pod:
 • Design apps to handle restarts.
 
 10. Summary
-
 • Pods = smallest deployable units in Kubernetes.
 • They wrap one or more containers with shared networking/storage.
 • Communication is handled by Kubernetes networking.
 • Volumes keep data safe beyond container restarts.
 
-
 11. Kubernetes Pod Commands with Explanation
-
 1. Create Pod
-
 kubectl apply -f pod.yaml
-
-
 • This creates a Pod using the YAML configuration file (pod.yaml).
 • The YAML file defines what container image, ports, and volumes the Pod should use.
 • If the Pod already exists, this command will update it.
-
 2. Get Pods
-
 kubectl get pods
 kubectl get pods -o wide
-
-
 • Shows all Pods in the current namespace.
 • kubectl get pods → Basic info (Pod name, status, age, restarts).
 • kubectl get pods -o wide → Extra details like Node name, Pod IP, container image etc.
-
 3. Describe Pod
-
 kubectl describe pod <pod-name>
-
-
 • Gives detailed information about a Pod:
 • Which node it is running on.
 • What containers are inside.
 • Events (like scheduling, pulling image, errors).
 • Resource requests & limits: useful for debugging why a Pod is failing or stuck in
 Pending/CrashLoopBackOff.
-
 4. Check Logs
-
 kubectl logs <pod-name>
 kubectl logs <pod-name> -c
-
-
 • Shows logs generated by containers inside the Pod.
 • For single-container Pods, just use Pod name.
 • For multi-container Pods, add -c <container-name> to specify which container’s logs you
 want. Useful for checking application errors or runtime issues.
-
 5. Enter into Pod (exec)
-
 kubectl exec -it <pod-name> -- /bin/bash
 kubectl exec -it <pod-name> -c <container-name> -- /bin/bash
-
-
 • Opens an interactive shell inside a Pod’s container.
 • -it → interactive mode (so you can type commands).
 • /bin/bash (or /bin/sh) → type of shell.
 • Useful for debugging inside the container (checking files, logs, configs).
-
 kubectl delete pod <pod-name>
 kubectl delete -f pod.yaml
-
-
 • kubectl delete pod <pod-name> → remove Pod directly.
 • kubectl delete -f pod.yaml → remove Pod defined in YAML file.
 • Note: If the Pod was created by a Deployment/ReplicaSet, Kubernetes will automatically
