@@ -1,38 +1,16 @@
-Kubernetes cluster
-==================
-
+Kubernetes cluster:
 1. self managed k8s cluster
-===========================
-
    1. minikube [single node k8s cluster]
-
    2. kubeadm [multi node k8s cluster]
-
 --> If any failure in the pod, It will taken care by k8s. If any failure in the nodes, k8s will not handle manually. we need to fix it
 
-
 2. cloud managed k8s cluster
-============================
-
 1. AWS ---> EKS [Elastic k8s service]
-
 2. Azure --> AKS [Azure k8s service]
-
 3. Google --> GKE [Google k8s engine]
-
-
 --> If any failure in the pod, It will taken care by k8s. If any failure in the nodes, cloud will  handle manually. we need to fix it
-
-
 1 master
-
 2 slave nodes
-
-
-
-
-
-
 =============================================================================================================================
 KK FUNDA  Ph: 863980177/9676831734
 ==============================================================================================================================
@@ -42,146 +20,73 @@ Agenda: Kubernetes Setup Using Kubeadm In AWS EC2 Ubuntu Servers Container-D As 
 
 Prerequisite:
 =============
-
 3 - Ubuntu Serves
-
 1 - master  (4GB RAM , 2 Core) t2.medium
-
 2 - Workers  (1 GB, 1 Core)     t2.micro
-
-
 Note: Open Required Ports In AWS Security Groups. For now we will open All trafic.
-
 ==========COMMON FOR MASTER & SLAVES START ====
-
-1) Switch to root user
-   
+1) Switch to root user   
 sudo su -
-
-
 2) Disable swap & add kernel settings
-
 #https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
-=======================================================================================
-
 swapoff -a
 sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
-
-
 3) Add  kernel settings & Enable IP tables(CNI Prerequisites)-Communication b/w POD to POD
-
 https://kubernetes.io/docs/setup/production-environment/container-runtimes/
-============================================================================
-
 cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
 overlay
 br_netfilter
 EOF
-
-
 modprobe overlay
 modprobe br_netfilter
-
-
-
 cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
 net.bridge.bridge-nf-call-iptables  = 1
 net.bridge.bridge-nf-call-ip6tables = 1
 net.ipv4.ip_forward                 = 1
 EOF
-
-
 sysctl --system
-
 4) Install containerd run time
-
 https://kubernetes.io/docs/setup/production-environment/container-runtimes/#containerd
-=======================================================================================
-
 https://github.com/containerd/containerd/blob/main/docs/getting-started.md
-==========================================================================
-
 https://docs.docker.com/engine/install/ubuntu/
-==============================================
-
 #To install containerd, first install its dependencies.
-
 apt-get update -y 
 apt-get install ca-certificates curl gnupg lsb-release -y
-
-
-
 Note: We are not installing Docker Here.Since containerd.io package is part of docker apt repositories hence we added docker repository & it's key to download and install containerd.
-
-
 # Add Docker’s official GPG key:
 mkdir -p /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-
 #Use follwing command to set up the repository:
-
 echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
   $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-  
-  
-# Install containerd
-
+  # Install containerd
 apt-get update -y
 apt-get install containerd.io -y
-
 # Generate default configuration file for containerd
-
 Note: Containerd uses a configuration file located in /etc/containerd/config.toml for specifying daemon level options.
 The default configuration can be generated via below command.
-
 containerd config default > /etc/containerd/config.toml
-
 # Run following command to update configure cgroup as systemd for contianerd.
-
 sed -i 's/SystemdCgroup \= false/SystemdCgroup \= true/g' /etc/containerd/config.toml
-
 # Restart and enable containerd service
-
 systemctl restart containerd
 systemctl enable containerd
-
-
 5) Installing kubeadm, kubelet and kubectl 
-
 # Update the apt package index and install packages needed to use the Kubernetes apt repository:
-
 https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/#check-required-ports
-===========================================================================================================
-
 apt-get update
 apt-get install -y apt-transport-https ca-certificates curl
-
 # Download the Google Cloud public signing key:
-
-
-
 curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.31/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-
 # Add the Kubernetes apt repository:
-
-
-
 echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
-
-
-
 # Update apt package index, install kubelet, kubeadm and kubectl, and pin their version:
-
 apt-get update
 apt-get install -y kubelet kubeadm kubectl
-
 # apt-mark hold will prevent the package from being automatically upgraded or removed.
 apt-mark hold kubelet kubeadm kubectl
-
-
 # Enable and start kubelet service
-
 systemctl daemon-reload 
 systemctl start kubelet 
 systemctl enable kubelet.service
@@ -195,106 +100,53 @@ systemctl enable kubelet.service
 ===========In Master Node Start====================
 
 https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/
-==============================================================================================
-
-
 # Steps Only For Kubernetes Master
-
 # Switch to the root user.
-
 sudo su -
-
 # Initialize Kubernates master by executing below commond.
-
 kubeadm init
-
 # If you want to initialize kubernetes on Public EndPoint(Not recommended in real time). You can use below option Replace PUBLIC_IP with actual public ip of your kubernetes master node (Recommended to use Elastic(Create and assign elastic IP to master node and use that Elastic IP below)).Replace PORT with 6443 (API Server Port). 
-
 #kubeadm init --control-plane-endpoint "PUBLIC_IP:PORT"
-
 IF Error
 #sudo kubeadm init --cri-socket /run/containerd/containerd.sock
-
-
 # Configure kubectl  exit as root user & exeucte as normal ubuntu user
 exit
-
 mkdir -p $HOME/.kube
 sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
 sudo chown $(id -u):$(id -g) $HOME/.kube/config
-
-
 # To verify, if kubectl is working or not, run the following command.
-
 kubectl get nodes
-
 kubectl get pods -o wide -n kube-system
-
 #You will notice from the previous command, that all the pods are running except one: ‘core-dns’. For resolving this we will install a # pod network addon like Calico or Weavenet ..etc. 
-
-
 Note: Install any one network addon don't install both. Install either weave net or calico.
-
 https://kubernetes.io/docs/concepts/cluster-administration/addons/
-==================================================================
-
 
 To install Weave net run the following command.
 
 https://www.weave.works/docs/net/latest/kubernetes/kube-addon/
-================================================================
-
 kubectl apply -f https://github.com/weaveworks/weave/releases/download/v2.8.1/weave-daemonset-k8s.yaml
-
 Or To install the calico network addon, run the following command:
-
 #kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml 
-
-
 kubectl get nodes
-
 kubectl get pods 
 kubectl get pods --all-namespaces
-
-
 # Get token
-
 kubeadm token create --print-join-command
 
 =========In Master Node End====================
 
 
 Add Worker Machines to Kubernates Master
-=========================================
-
 Copy kubeadm join token from and execute in Worker Nodes to join to cluster
-
-
-
 kubectl commonds has to be executed in master machine.
-
 Check Nodes 
-=============
-
 kubectl get nodes
-
-
-
 Deploy Sample Application
-==========================
-
 kubectl run nginx-demo --image=nginx --port=80 
-
 kubectl create ns test
 
 
-
-
-===================================================================================================
-
-
 Kubernetes Objects  / API resources [kubectl api-resources]
-====================================
 
 Pod
 ReplicationController
@@ -302,59 +154,30 @@ ReplicaSet
 DaemonSet
 Deployment
 StatefulSet
-
 namespace
-
-
-
 ConfigMap
 Secret
-
 Service
 NetworkPolicies
 Ingress
-
-
 PersistentVolumeClaim
 PersistentVolume
 
-
-
-
 what is cluster?
-================
-
 It is group of k8s servers/nodes.
-
 what is node?
-=============
-
-
+A machine (physical or virtual) inside Kubernetes cluster that runs Pods/containers.
 How to list all k8s resources?
-==============================
-
 kubectl api-resources
-
-
-
-
 kubectl create namespace <NN>
-
 kubectl create ns testing-ns
-
-
 
 k8s nameSpaces
 ==============
 In Kubernetes, namespaces are a way to organize and manage resources within a cluster.
 They help you divide cluster resources between multiple users or teams and can be useful for managing resource quotas, network policies, and access control.
-
 Here are some key commands and YAML examples related to Kubernetes namespaces:
-
 1. Creating a Namespace
-------------------------
-
-
 Create a namespace using a YAML file, as shown earlier:
 
 apiVersion: v1
@@ -365,58 +188,22 @@ metadata:
     name: my-namespace
 
 kubectl apply -f namespace.yaml
-
-
---> Alternatively, you can create a namespace directly from the command line:
-
+Alternatively, you can create a namespace directly from the command line:
 kubectl create namespace my-namespace
 
-
-
-
-
-
-
-
 2. Listing Namespaces
----------------------
-
 kubectl get namespaces  or kubectl get ns
 
-
 3. Viewing Namespace Details
------------------------------
-
 To get detailed information about a specific namespace:
-
 kubectl describe ns my-namespace
 
-
-
-
-
-
-
 4. Deleting a Namespace
------------------------
-
 To delete a namespace (along with all the resources within it):
-
 kubectl delete namespace my-namespace
 
-
-
-
-
-
-
-
 5. Using Namespaces in Resource Definitions
----------------------------------------------
-
-
 When defining resources (like Pods, Services, Deployments) in YAML files, you specify the namespace under the metadata section:
-
 
 apiVersion: v1
 kind: Pod
@@ -428,19 +215,12 @@ spec:
   - name: ngnix123
     image: nginx
 
-
-
 kubectl apply -f pod.yaml
 
-
 6. Switching Namespaces in kubectl Context
---------------------------------------------
-
 kubectl config set-context --current --namespace=test
 
 7. Namespace Resource Quotas
------------------------------
-
 You can define resource quotas and limits per namespace to control the usage of resources:
 
 apiVersion: v1
@@ -451,7 +231,6 @@ metadata:
 spec:
   hard:
     pods: "10"
-
 
 kubectl apply -f quota.yaml
 
@@ -515,224 +294,352 @@ Types of Namespaces in Kubernetes
 ○ Helps in keeping workloads isolated and well-managed.
 
 
-notes from chatgpt:
+NOTES FROM CHATGPT:
 
 
-1️⃣ What is swap in Linux?
+What are Kubernetes Objects / API Resources?
+Kubernetes manages everything as:
+Objects (API resources)
+Simple meaning
+A Kubernetes object is:
+A resource definition stored in Kubernetes that tells the cluster what to create/manage.
+Example
+When you create:
+kind: Pod
+you are creating a Kubernetes object.
+Where are these stored?
+Inside:
+etcd
 
+How to see all API resources?
+Command:
+kubectl api-resources
+What this shows
+All available Kubernetes object types:
+Pods
+Deployments
+Services
+ConfigMaps
+Secrets
+...
+Important understanding
+Each object has:
+YAML definition
+API endpoint
+Desired state
+Categories of Kubernetes Objects
+Your list can be grouped into:
+| Category      | Objects                         |
+| ------------- | ------------------------------- |
+| Workloads     | Pod, Deployment, StatefulSet    |
+| Configuration | ConfigMap, Secret               |
+| Networking    | Service, Ingress, NetworkPolicy |
+| Storage       | PV, PVC                         |
+| Organization  | Namespace                       |
+
+1. Pod (smallest unit)
+What is Pod?
+A Pod is:
+Smallest deployable unit in Kubernetes.
+Contains
+One or more containers
+Shared network
+Shared storage
+Example
+Nginx container running inside Pod
+Important
+Containers are NOT directly deployed.
+Kubernetes deploys:
+Pods
+
+2. ReplicationController (OLD)
+Purpose
+Maintain desired number of Pods.
+Example
+replicas = 3
+If one pod dies:
+New pod automatically created
+Status
+Mostly replaced by:
+ReplicaSet
+
+3. ReplicaSet
+Purpose
+Ensures fixed number of Pods always exist.
+Example
+Need 5 pods always
+ReplicaSet maintains them.
+Usually NOT created directly
+Managed by:
+Deployment
+
+4. Deployment (MOST COMMON)
+Purpose
+Manages ReplicaSets and application updates.
+Features
+Rolling updates
+Rollback
+Scaling
+Self-healing
+Real-world use
+Most applications use:
+Deployment
+
+5. DaemonSet
+Purpose
+Run ONE pod on EVERY node.
+Example use cases
+Log collectors
+Monitoring agents
+Security agents
+Example
+Fluentd pod on every node
+
+6. StatefulSet
+Purpose
+For stateful applications.
+Used for
+MongoDB
+MySQL
+Kafka
+Features
+Stable pod names
+Stable storage
+Ordered startup/shutdown
+Example pod names
+mongodb-0
+mongodb-1
+mongodb-2
+
+7. Namespace
+Purpose
+Logical separation inside cluster.
+Example
+dev
+test
+prod
+Why useful?
+Avoid naming conflicts and isolate environments.
+
+8. ConfigMap
+Purpose
+Store NON-sensitive configuration.
+Example
+DB_HOST
+APP_MODE
+PORT
+Helps separate config from code
+
+9. Secret
+Purpose
+Store sensitive data.
+Examples
+Passwords
+Tokens
+API keys
+Kubernetes stores them encoded.
+
+10. Service
+Purpose
+Provides stable network access to Pods.
+Problem solved
+Pods change IPs frequently.
+Service provides:
+Stable DNS + stable IP
+Types
+ClusterIP
+NodePort
+LoadBalancer
+Headless
+
+11. NetworkPolicy
+Purpose
+Controls Pod-to-Pod traffic.
+Example
+Allow only Spring app → MongoDB
+
+12. Ingress
+Purpose
+HTTP/HTTPS routing into cluster.
+Example
+app.company.com → app-service
+Usually works with
+NGINX Ingress Controller
+
+13. PersistentVolume (PV)
+Purpose
+Actual storage resource.
+Example
+EBS volume
+NFS share
+
+14. PersistentVolumeClaim (PVC)
+Purpose
+Request storage from Kubernetes.
+Example
+App asks for 10Gi storage
+PVC binds to PV.
+Simple analogy
+Object	Analogy
+PV	Actual hard disk
+PVC	Request form for disk
+Overall architecture picture
+Deployment
+   ↓ manages
+ReplicaSet
+   ↓ manages
+Pods
+   ↓ accessed by
+Service
+Storage flow
+PVC → binds → PV
+Networking flow
+Ingress → Service → Pods
+
+One-line memory for each
+| Object        | Memory                |
+| ------------- | --------------------- |
+| Pod           | Smallest app unit     |
+| ReplicaSet    | Maintain pod count    |
+| Deployment    | Manage app lifecycle  |
+| DaemonSet     | One pod per node      |
+| StatefulSet   | Stateful apps         |
+| Namespace     | Logical isolation     |
+| ConfigMap     | Non-secret config     |
+| Secret        | Sensitive config      |
+| Service       | Stable networking     |
+| NetworkPolicy | Traffic control       |
+| Ingress       | External HTTP routing |
+| PV            | Actual storage        |
+| PVC           | Storage request       |
+
+🔚 Final summary
+
+Kubernetes objects are API resources that define:
+
+workloads
+networking
+storage
+configuration
+security
+
+Everything in Kubernetes is managed as an object through the API server.
+
+
+
+
+
+
+What is swap in Linux?
 Swap is disk space used as extra virtual memory when your RAM is full.
-
 Think of it like this:
-
-🧠 RAM → fast, expensive, limited
-
-💾 Disk (swap) → slow, cheap, larger
-
+RAM → fast, expensive, limited
+Disk (swap) → slow, cheap, larger
 When RAM is exhausted:
-
 Inactive memory pages are moved from RAM → swap
-
 This prevents the system from crashing due to Out Of Memory (OOM)
-
-
-
 Why do people disable swap?
-
 Common real-world reasons:
-
-🔹 Kubernetes / Docker
-
+Kubernetes / Docker
 Kubernetes requires swap OFF
-
 Swap causes unpredictable scheduling
-
-🔹 Performance-sensitive systems
-
-
-
+Performance-sensitive systems
 What are kernel settings?
-
 The kernel is the core of Linux.
 Kernel settings are runtime parameters that control how the kernel behaves.
 
 Examples:
 
 Memory management
-
 Networking
-
 File system limits
-
 Process handling
-
 Security features
-
 These settings are exposed via sysctl.
-
 What does “disabling a kernel setting” mean?
-
-It does NOT mean turning off the kernel ❌
+It does NOT mean turning off the kernel
 It means:
-
 Changing a kernel parameter to stop or restrict a specific behavior
-
 Simple analogy (easy to remember)
-
 Think of Linux kernel like a car engine ECU 🚗
-
 Kernel setting = engine tuning knob
-
 Disabling a setting = turning off a feature you don’t need
-
 Goal:
-
 Better mileage
-
 Stable driving
-
 No unexpected behavior
-
-8️⃣ Summary (interview-ready)
-
+8️.Summary (interview-ready)
 Disabling kernel settings means modifying kernel parameters to stop or restrict certain default behaviors for better performance, security, predictability, or software compatibility. These changes are done using sysctl and are common in containerized and production systems.
-
 Swap can cause latency spikes
-
-🔹 Memory tuning
-
+Memory tuning
 Force apps to fail fast instead of slow swap
 
 
 
 
 
-
-
-
-
-
 1️⃣ What is iptables?
-
 iptables is the Linux firewall mechanism.
-
 It controls:
-
 Which network packets are allowed
-
 Which are blocked
-
 Which are modified or forwarded
-
 In simple words:
-
 iptables = traffic rules for your Linux system
-
 Every packet entering or leaving your server is checked against these rules.
-
 2️⃣ What does “adding iptables” mean?
-
 It means:
-
 Adding firewall rules to control network traffic
-
 Example:
-
 Allow SSH
-
 Block a malicious IP
-
 Allow only certain ports
-
 Forward traffic to containers
-
 So when someone says:
-
 “Add iptables”
-
 They usually mean:
-
 “Add firewall rules using iptables commands”
-
 Real-world meaning of “adding iptables” in DevOps
-
 Usually done for:
-
-🔹 Security hardening
-
+Security hardening
 Allow only required ports
-
 Block unwanted access
-
-🔹 Docker / Kubernetes networking
-
+Docker / Kubernetes networking
 NAT rules for containers
-
 Port forwarding
-
 Pod-to-pod traffic
-
 (Important: Docker and Kubernetes automatically add iptables rules)
-
 Interview-ready one-liner
-
 Adding iptables means creating firewall rules in Linux to allow, block, or control network traffic at the kernel level.
 
 
-
-
-
 What is a Docker GPG key?
-
 A Docker GPG key is a public cryptographic key used to verify that Docker packages are genuine and not tampered with.
-
 In simple terms:
-
 It’s Docker’s official “signature” that proves the software really comes from Docker and hasn’t been modified.
-
-2️⃣ Why does Docker use a GPG key?
-
+2️.Why does Docker use a GPG key?
 When you install Docker from its official repository (APT/YUM):
-
 Packages are signed by Docker
-
 Your system checks the signature
-
 Installation proceeds only if the signature matches
-
 This protects you from:
-
-❌ Fake or malicious packages
-
-❌ Man-in-the-middle attacks
-
-❌ Compromised mirrors
-
-So it’s about security + trust 🔐
-
+Fake or malicious packages
+Man-in-the-middle attacks
+Compromised mirrors
+So it’s about security + trust 
 
 This does two things:
-
 Downloads Docker’s public GPG key
-
 Stores it in your system’s trusted keyring
-
-5️⃣ What happens after adding the key?
-
+5️.What happens after adding the key?
 When you run:
-
 apt update
 
-
 APT:
-
 Downloads Docker packages
-
 Verifies package signatures using the Docker GPG key
-
 Installs only if verification succeeds
-
-If the key is missing ❌:
-
+If the key is missing:
 NO_PUBKEY error
 The following signatures couldn't be verified
 A Docker GPG key is a public cryptographic key used by the operating system to verify the authenticity and integrity of Docker packages before installation, ensuring they come from Docker and haven’t been altered.
