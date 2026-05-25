@@ -371,3 +371,57 @@ kubectl delete -f pod.yaml
 • kubectl delete -f pod.yaml → remove Pod defined in YAML file.
 • Note: If the Pod was created by a Deployment/ReplicaSet, Kubernetes will automatically
 recreate it.
+
+
+
+
+
+
+
+what is meant by exit code:
+An exit code is:
+A number returned by a program/process when it finishes execution.
+Containers return exit codes when they stop.
+Linux example
+Successful command
+ls
+Runs correctly.
+Check exit code
+echo $?
+Output:
+0
+What is $?
+Special Linux variable storing:
+Last command's exit code
+Failed command example
+cat abc.txt
+If file doesn’t exist:
+cat: abc.txt: No such file
+Check exit code
+echo $?
+Output:
+1
+Meaning:
+Command failed
+Why exit codes exist?
+Programs communicate status to:
+Linux OS
+Shell
+Kubernetes
+Scripts
+
+0 → successful completion ✔
+non-zero → failure/error ❌
+| Exit Code | Meaning         |
+| --------- | --------------- |
+| 0         | Success ✔       |
+| Non-zero  | Error/Failure ❌ |
+
+| Exit Code | Meaning                  |
+| --------- | ------------------------ |
+| 1         | General error            |
+| 126       | Command cannot execute   |
+| 127       | Command not found        |
+| 137       | Killed (often OOMKilled) |
+| 139       | Segmentation fault       |
+| 143       | Gracefully terminated    |
