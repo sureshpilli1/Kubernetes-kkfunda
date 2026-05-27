@@ -242,10 +242,10 @@ selector:
   app: javawebapp
 
 3. Why Are They Important?
-Labels and selectors are crucial for creating Services.
-They make sure traffic is routed to the right Pods. This way, Kubernetes knows which Pods should receive the traffic.
-Without labels, services cannot find Pods → traffic will break.
-By grouping Pods with labels, you can easily manage environments (dev, test, prod).
+1.Labels and selectors are crucial for creating Services.
+2.They make sure traffic is routed to the right Pods. This way, Kubernetes knows which Pods should receive the traffic.
+3.Without labels, services cannot find Pods → traffic will break.
+4.By grouping Pods with labels, you can easily manage environments (dev, test, prod).
 Simple workflow:
 Add labels to Pods.
 Create a Service with a selector.
@@ -453,6 +453,11 @@ ubuntu@ip-172-31-31-186:~$
 Pods are ephemeral → Pod IP changes when pod restarts.
 Service gives a stable DNS name + virtual IP to access pods.
 Service can also load balance traffic across multiple pods with same label.
+IQ] why we are going for k8s service object?
+NOTE: one pod can communicate with another pod through IP, But is not suggestable why?
+(i) Pod ip may changed , when it crashes
+(ii) you need to maintain many replicas, At that time multiple ips are generated.
+--> To overcome this problem , we are going for one Object called "Service"
 
 15. Service in Kubernetes
 A Service in Kubernetes provides a stable way for communication between Pods, ensuring availability and proper traffic routing. 
