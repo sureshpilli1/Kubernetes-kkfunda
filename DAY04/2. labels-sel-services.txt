@@ -235,7 +235,7 @@ labels:
   environment: production
 
 2. Selectors
-A selector is used to find objects by their labels.
+A selector is used to find objects by their labels. It’s like Filter, Conditions and query to your labels
 Services, ReplicaSets, and Deployments use selectors to decide which Pods they should work with.
 Example:
 selector:
