@@ -210,3 +210,96 @@ Static Pods are used to run critical components of Kubernetes, like the `kube-ap
 No Scheduler: Static Pods are not scheduled, meaning you cannot use the regular scheduling mechanisms like Deployments, ReplicaSets, or StatefulSets to scale them or ensure distribution across nodes.
 Hard to Manage at Scale: Since static pods are not managed by the API server, they are harder to manage in larger clusters where you might want higher-level abstractions.
 Static pods do not appear in the Kubernetes API server’s pod list (`kubectl get pods`) by default. However, they are still visible on the node itself and can be seen via `kubectl describe node <node-name>` or in the Kubelet's log files.
+
+
+
+CHATGPT NOTES:
+How to identify static Pods?
+Usually names contain node name.
+Example:
+kube-apiserver-ip-172-31-10-1
+
+
+What is Bootstrapping?
+Bootstrapping means:
+The process of starting and initializing a system from the beginning.
+Simple meaning
+Bootstrapping = bringing a system to working state
+In computers
+Bootstrapping means:
+Starting a system and preparing it to run
+Example: Computer Boot
+When you power on laptop:
+Steps
+1. BIOS/UEFI starts
+2. Bootloader loads
+3. OS kernel loads
+4. Services start
+5. System becomes usable
+This whole startup initialization is:
+Bootstrapping process
+Why called “bootstrap”?
+Comes from phrase:
+"Pull yourself up by your bootstraps"
+Meaning:
+system starts itself from minimal state.
+
+Kubernetes bootstrapping
+Very important for DevOps.
+Kubernetes cluster bootstrap
+When creating cluster:
+Steps
+1. Start control plane
+2. Start kubelet
+3. Configure networking
+4. Join worker nodes
+5. Start system pods
+This is:
+
+Cluster bootstrapping
+Example: kubeadm init
+Command:
+kubeadm init
+This bootstraps:
+API server
+scheduler
+controller manager
+etcd
+Worker node bootstrap
+When node joins cluster:
+kubeadm join ...
+Node:
+installs certificates
+connects to API server
+starts kubelet
+This is also bootstrapping.
+Other examples of bootstrapping
+
+Cloud bootstrapping
+When EC2 instance starts:
+install packages
+configure services
+run startup scripts
+
+Application bootstrapping
+Spring Boot startup:
+initialize configs
+create beans
+connect DB
+
+Database bootstrapping
+MongoDB initializes:
+storage engine
+indexes
+logs
+
+Bootstrapping means:
+preparing system
+initializing components
+bringing system into usable state
+Used in:
+OS startup
+Kubernetes cluster setup
+Node joining
+Application startup
+Cloud provisioning
