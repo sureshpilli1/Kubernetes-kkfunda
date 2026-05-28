@@ -485,6 +485,11 @@ Kubernetes assigns a cluster-internal IP address to the Service.
 Accessible only within the cluster.
 Optional: you can set clusterIP in the service YAML.
 Not accessible from outside the cluster unless exposed with NodePort/LoadBalancer/Ingress.
+Service will only route traffic to ready pods.
+If not ready, Service will exist but no endpoints will be available.
+You see both the Pod and Service.
+CLUSTER-IP is the stable internal IP of the Service.
+EXTERNAL-IP is <none> because ClusterIP is not exposed outside cluster.
 Flow:
 Pod → Label → Service → Endpoint → Traffic Routing
 Example: Java Web App Pod + Service
