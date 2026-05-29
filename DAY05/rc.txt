@@ -50,6 +50,9 @@ A ReplicationController is a Kubernetes object that ensures a fixed number of id
 Self-healing: If a Pod crashes or is deleted, RC creates a new one.
 No extras allowed: If someone manually creates extra Pods with the same labels, RC deletes them to maintain the correct count.
 Label-based tracking: RC doesn’t care about Pod names it uses labels to find and manage Pods.
+A Replication Controller is a structure that enables you to easily create multiple pods, then make sure that that number of pods always exists. 
+If a pod does crash, the Replication Controller replaces it.
+Replication Controllers and PODS are associated with labels.
 
 2. Desired vs Observed State
 Desired state: How many Pods you want (e.g., 3).
