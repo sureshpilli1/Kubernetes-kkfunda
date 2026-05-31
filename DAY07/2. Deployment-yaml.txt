@@ -766,3 +766,19 @@ kubectl rollout history deployment nginx-deployment --revision=1
 
 # Rollback to specific revision
 kubectl rollout undo deployment nginx-deployment --to-revision=1
+
+
+
+
+
+
+| Feature             | Pod   | ReplicationController   | ReplicaSet                      | Deployment  |
+| ------------------- | ----  | ---------------------   | -----------------------------   | ----------- |
+| Runs Containers     | ✅    | ✅                     | ✅                             | ✅           |
+| Maintains Pod Count | ❌    | ✅                     | ✅                             | ✅           |
+| Self-Healing        | ❌    | ✅                     | ✅                             | ✅           |
+| Advanced Selectors  | ❌    | ❌                     | ✅                             | ✅           |
+| Rolling Updates     | ❌    | ❌                     | ❌                             | ✅           |
+| Rollback            | ❌    | ❌                     | ❌                             | ✅           |
+| Commonly Used Today | Rare   | Almost never           | Usually managed by Deployment   | Very common |
+
