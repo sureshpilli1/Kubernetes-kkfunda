@@ -189,17 +189,21 @@ spec:                   # The "specification" of the Pod
       ports:
         - containerPort: 80
 Key Sections Explained
+
 1. apiVersion
 ○ Tells Kubernetes which version of the object definition to use.
 ○ For Pods → usually v1.
+
 2. kind
 ○ Defines what you’re creating.
 ○ Example: Pod, Deployment, Service, ConfigMap.
+
 3. metadata
 ○ Name, labels, and namespace.
 ○ Example:
 ○ name: my-first-pod → this pod’s name in the cluster.
 ○ namespace: default → lives in the default namespace.
+
 4. spec
 ○ The heart of the configuration.
 ○ Defines how the pod should run: containers, images, ports, volumes, etc.
@@ -220,6 +224,7 @@ kubectl get pods
 kubectl get pods -n [namespace name]
 The scheduler finds a worker node to host the pod.
 The kubelet on that node pulls the image and starts the container.
+
 b) Multi-Container Pod
 A multi-container pod is a pod that runs two or more containers together.
 All containers in the pod share:
@@ -235,7 +240,6 @@ Example:
 • Log collection and shipping (e.g., Fluent Bit)
 • Service proxy (e.g., Envoy, Istio sidecar)
 • Data synchronization or backup tasks
-
 • Multiple containers that must be together.
 • Often used in the Sidecar Pattern:
 ○ Main app container (your application)
@@ -261,6 +265,7 @@ Pods talk directly via their IPs no extra steps.
 • Different Nodes:
 Kubernetes uses a Cluster Network (e.g., Calico, Flannel, Cilium) to make sure pods can talk
 to each other even if they’re far apart in different machines.
+
 6. Pod Storage
 Containers are ephemeral if they restart, data inside disappears.
 Solution: Use Volumes.
@@ -271,6 +276,7 @@ Common Volume Types:
 Tip: For databases or apps that store important data, always use Persistent Volumes.
 
 7. Pod Lifecycle
+
 1. Pending
 Pod is created but not yet scheduled or started.
 Possible scenarios:
@@ -278,22 +284,26 @@ Possible scenarios:
 • Required Persistent Volume (PV) is not yet bound.
 • Container image is still downloading from the registry.
 • Scheduling constraints (e.g., nodeSelector, taints/tolerations) prevent placement.
+
 2. Running
 Pod has been scheduled to a node, and at least one container is running without issues.
 Possible scenarios:
 • Application is healthy and serving traffic normally.
 • Containers have passed readiness/liveness probes.
+
 3. Succeeded
 All containers in the pod have completed successfully and will not restart.
 Possible scenarios:
 • Batch job finished processing data with no errors.
 • One-off scripts executed to completion.
+
 4. Failed
 All containers have stopped, and at least one exited with a non-zero status.
 Possible scenarios:
 • Wrong command or arguments in the container entrypoint.
 • Application crashed due to missing files or misconfiguration.
 • Required services or dependencies were unavailable.
+
 5. CrashLoopBackOff
 Pod repeatedly fails, Kubernetes restarts it, but it keeps crashing.
 Possible scenarios:
@@ -302,6 +312,7 @@ Possible scenarios:
 • Port conflict (port already in use).
 • Application bug causing repeated crashes.
 • Out of Memory (OOMKilled) due to insufficient resources.
+
 6. Unknown
 Pod state can’t be determined because the Kubernetes API server has lost communication with
 the node where the pod was running.
@@ -343,6 +354,7 @@ kubectl get pods -o wide
 • Shows all Pods in the current namespace.
 • kubectl get pods → Basic info (Pod name, status, age, restarts).
 • kubectl get pods -o wide → Extra details like Node name, Pod IP, container image etc.
+
 3. Describe Pod
 kubectl describe pod <pod-name>
 • Gives detailed information about a Pod:
@@ -351,6 +363,7 @@ kubectl describe pod <pod-name>
 • Events (like scheduling, pulling image, errors).
 • Resource requests & limits: useful for debugging why a Pod is failing or stuck in
 Pending/CrashLoopBackOff.
+
 4. Check Logs
 kubectl logs <pod-name>
 kubectl logs <pod-name> -c
@@ -358,6 +371,7 @@ kubectl logs <pod-name> -c
 • For single-container Pods, just use Pod name.
 • For multi-container Pods, add -c <container-name> to specify which container’s logs you
 want. Useful for checking application errors or runtime issues.
+
 5. Enter into Pod (exec)
 kubectl exec -it <pod-name> -- /bin/bash
 kubectl exec -it <pod-name> -c <container-name> -- /bin/bash
@@ -371,6 +385,9 @@ kubectl delete -f pod.yaml
 • kubectl delete -f pod.yaml → remove Pod defined in YAML file.
 • Note: If the Pod was created by a Deployment/ReplicaSet, Kubernetes will automatically
 recreate it.
+
+
+
 
 
 
