@@ -209,7 +209,8 @@ Static Pods are used to run critical components of Kubernetes, like the `kube-ap
 • Not suited for regular application workloads
 No Scheduler: Static Pods are not scheduled, meaning you cannot use the regular scheduling mechanisms like Deployments, ReplicaSets, or StatefulSets to scale them or ensure distribution across nodes.
 Hard to Manage at Scale: Since static pods are not managed by the API server, they are harder to manage in larger clusters where you might want higher-level abstractions.
-Static pods do not appear in the Kubernetes API server’s pod list (`kubectl get pods`) by default. However, they are still visible on the node itself and can be seen via `kubectl describe node <node-name>` or in the Kubelet's log files.
+Static pods do not appear in the Kubernetes API server’s pod list (`kubectl get pods`) by default. 
+However, they are still visible on the node itself and can be seen via `kubectl describe node <node-name>` or in the Kubelet's log files.
 
 
 
