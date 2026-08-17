@@ -147,7 +147,7 @@ kubectl rollout undo deployment javawebappdep -n test-ns --to-revision 1
 
 
 
-    
+follow the .md notes in day7 and important points are highlighted in the below notes    
 
 
 
@@ -164,14 +164,14 @@ and the Deployment makes it happen. Whether you need to release a new version or
 Deployments are the backbone of Kubernetes applications.
 They manage the lifecycle of Pods and provide features like scaling, rolling updates, and rollback.
 When you define and use a Deployment:
-The Deployment automatically creates a ReplicaSet in the background.
+***The Deployment automatically creates a ReplicaSet in the background.***
 ReplicaSet Management
 The ReplicaSet ensures that the desired number of Pods are running at all times.
 The ReplicaSet creates and manages Pods.
 Inside each Pod, there can be one or more containers running your application.
 Flow: Deployment → ReplicaSets (RS) → Pods → Containers
 Self-Healing in Deployments
-Kubernetes automatically replaces failed or unhealthy Pods to maintain the desired state.
+***Kubernetes automatically replaces failed or unhealthy Pods to maintain the desired state.***
 The controllerManager constantly watches the Pods and recreates them if they fail.
 Once the Kubernetes Deployment is set up, the only manual task is updating the configuration 
 (such as changing the container image version or adjusting replica counts).
@@ -183,7 +183,7 @@ If an update causes issues, Kubernetes can automatically roll back to the previo
 Replica Management → Ensures the specified number of Pods are always running.
 Rolling Updates → Updates applications gradually with minimal or no downtime.
 Rollback Capability → Easily revert to a previous version if a rollout fails.
-Declarative Scaling → Adjust the number of replicas by changing a single field in the YAML.
+****Declarative Scaling → Adjust the number of replicas by changing a single field in the YAML.****
 
 4. Deployment Strategies in Kubernetes
 When you release a new version of your application, Kubernetes provides different strategies to control how Pods are updated. 
@@ -192,8 +192,8 @@ The two main strategies are Recreate and RollingUpdate.
 In this strategy, all the old Pods are terminated first, and then new Pods are created with the updated version.
 This means there will be downtime during the update because, for a short period, no Pods are available to serve requests.
 When to use Recreate?
-When downtime is acceptable.
-When running two versions of the app at the same time could cause conflicts (for example, database schema changes).
+**When downtime is acceptable.
+**When running two versions of the app at the same time could cause conflicts (for example, database schema changes).
 Example flow:
 Step 1: Existing Pods → [v1][v1][v1]
 Step 2: Delete all Pods
@@ -317,8 +317,8 @@ So, as you can see:
 Deployment → creates ReplicaSet.
 ReplicaSet → ensures correct number of Pods (Desired = Current = Ready).
 That’s why you see 3 Pods running under this ReplicaSet.
-Checking Rollout Status
-kubectl rollout status deployment javawebappdep -n test-ns
+***Checking Rollout Status
+***kubectl rollout status deployment javawebappdep -n test-ns
 deployment "javawebappdeploy" successfully rolled out
 Step 2: Update to Version 1.0.1
 Whenever you update the Deployment with a new image tag, Kubernetes automatically creates a new revision and associates it with a ReplicaSet.
@@ -361,14 +361,14 @@ Desired = 3, Current = 3, Ready = 3 → managing the new Pods.
 Age = 3s → fresh, created for version 1.0.1 rollout.
 This clearly shows old ReplicaSet scaled down to 0, and new ReplicaSet scaled up to 3.
 Step 3: Checking Deployment Rollout History
-Each time you update Deployment image, Kubernetes creates a new ReplicaSet and assigns it a new revision number.
-By checking rollout history with --revision, you can confirm:
+*****Each time you update Deployment image, Kubernetes creates a new ReplicaSet and assigns it a new revision number.
+*****By checking rollout history with --revision, you can confirm:
 Which version (image tag) was deployed.
 What configuration was applied.
 This way, you map revisions to exact images.
 At any time, you can check with:
-Checking Deployment Rollout History (Revision 1)
-kubectl rollout history deployment javawebappdep -n test-ns --revision 2
+***Checking Deployment Rollout History (Revision 1)
+***kubectl rollout history deployment javawebappdep -n test-ns --revision 2
 deployment.apps/javawebappdeploy with revision #2
 Pod Template:
   Labels:       app=javawebapp
@@ -492,7 +492,7 @@ spec:
 
 kubectl apply -f deploy.yaml
 Check Rollout Progress (Live Status)
-kubectl rollout status deployment javawebappdeploy -n test-ns
+***kubectl rollout status deployment javawebappdeploy -n test-ns
 Waiting for deployment "javawebappdeploy" rollout to finish: 0 of 3 updated replicas are available
 Waiting for deployment "javawebappdeploy" rollout to finish: 1 of 3 updated replicas are available
 Waiting for deployment "javawebappdeploy" rollout to finish: 2 of 3 updated replicas are available
@@ -543,7 +543,7 @@ Kubernetes keeps track of these revisions so that you can roll back to a stable 
 Let’s walk through an example with a Deployment named javawebappdeploy running in the namespace test-ns.
 1. Checking Deployment Rollout History
 To see the revision history:
-kubectl rollout history deployment javawebappdeploy -n test-ns
+****kubectl rollout history deployment javawebappdeploy -n test-ns
 Each update creates a revision number. The CHANGE-CAUSE column is empty because we didn’t provide --record or annotate with a cause message.
 deployment.apps/javawebappdeploy
 REVISION  CHANGE-CAUSE
