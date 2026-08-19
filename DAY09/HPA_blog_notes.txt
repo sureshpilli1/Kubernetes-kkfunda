@@ -2,7 +2,7 @@
 One of the coolest features of Kubernetes is that it automatically scales your application based on demand.
 Imagine you have an app running smoothly with 2 Pods, but suddenly traffic spikes. Instead of manually adding more Pods, Kubernetes can auto-scale for you.
 That’s exactly what the Horizontal Pod Autoscaler (HPA) does.
-HPA monitors your application’s resource usage (like CPU or memory) and automatically increases or decreases the number of Pods to handle the load.
+***HPA monitors your application’s resource usage (like CPU or memory) and automatically increases or decreases the number of Pods to handle the load.
 
 2. What Is HPA?
 Before HPA, scaling was a manual process.
