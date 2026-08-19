@@ -12,7 +12,7 @@ If traffic increases → you run the command and increase replicas manually
 If traffic decreases → again you scale down manually
 Problem: You always need to monitor usage and adjust replicas by hand
 With HPA:
-Kubernetes does this automatically based on CPU/Memory or custom metrics
+*** Kubernetes does this automatically based on CPU/Memory or custom metrics
 No need to run kubectl scale every time
 
 So the difference is:
@@ -24,7 +24,7 @@ Horizontal scaling → Add or remove Pods
 Vertical scaling → Give more CPU/Memory to existing Pods
 The Horizontal Pod Autoscaler (HPA) works on horizontal scaling.
 It automatically adjusts the number of Pods in a Deployment, ReplicaSet, or StatefulSet based on load — according to the values you define.
-You set a target metric (for example, CPU usage at 50%), and Kubernetes continuously monitors the Pods against this target.
+***You set a target metric (for example, CPU usage at 50%), and Kubernetes continuously monitors the Pods against this target.
 Example:
 (minReplicas: 2 and maxReplicas: 5)
 Low traffic → 2 Pods (minimum)
