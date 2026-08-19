@@ -367,3 +367,10 @@ Instead remember the questions:
 3. Which resource? → name: cpu / memory
 4. What kind of target? → type: Utilization
 5. What percentage? → averageUtilization: 30 / 80
+
+
+
+metrics is a list because an HPA can have multiple metric definitions. target is an object because each metric has one target definition.
+
+And notice something interesting: type appears in both places, but that doesn't make either one a list. The - before type: Resource belongs to metrics and indicates a new metric item. 
+The type: Utilization under target is simply a field inside that target object.
