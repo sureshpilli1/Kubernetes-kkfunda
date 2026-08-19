@@ -326,3 +326,44 @@ HPA says:
 If you don’t set requests:
 HPA cannot calculate properly
 Scaling becomes wrong
+
+
+
+how to write metrics block in HPA
+---------------------------------
+The YAML hierarchy is the most important thing to learn
+Don't memorize the entire block. Understand the parent → child relationship
+
+metrics
+│
+├── - type
+│
+│   └── resource
+│       │
+│       ├── name
+│       │
+│       └── target
+│           │
+│           ├── type
+│           └── averageUtilization
+│
+└── - type
+    │
+    └── resource
+        │
+        ├── name
+        │
+        └── target
+            │
+            ├── type
+            └── averageUtilization
+
+
+
+Instead remember the questions:
+
+1. What am I monitoring? → metrics
+2. What kind of metric? → type: Resource
+3. Which resource? → name: cpu / memory
+4. What kind of target? → type: Utilization
+5. What percentage? → averageUtilization: 30 / 80
