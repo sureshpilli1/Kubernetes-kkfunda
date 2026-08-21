@@ -661,3 +661,93 @@ You know to use MONGO_DB_HOSTNAME only by checking application code or configura
 The application uses the Service name. The Service uses the selector.
 They work at different levels
 mongosvc is the address/name used by the Spring application to reach the Service, while app: mongodb is the label used by the Service to identify the MongoDB Pod.
+
+
+
+
+7. Why do we need the credentials on both sides?
+Think about creating an account on a website.
+The website first creates:
+Username: Suresh
+Password: XYZ
+Later, when you log in, you provide:
+Username: Suresh
+Password: XYZ
+Same idea here.
+MongoDB initialization
+Create user:
+devdb
+devdb@123
+Spring Boot connection
+Login as:
+devdb
+devdb@123
+MongoDB checks the credentials.
+If they match:
+Spring Boot
+     │
+     │ username/password
+     ▼
+MongoDB
+     │
+     ▼
+Authentication successful ✅
+
+If the password is wrong:
+Authentication failed ❌
+
+8. What about MONGO_DB_HOSTNAME?
+Username/password answer:
+Who are you?
+Hostname answers:
+Where is the MongoDB server?
+Your application has:
+MONGO_DB_HOSTNAME: mongosvc
+Kubernetes resolves:
+mongosvc
+    ↓
+MongoDB Service ClusterIP
+    ↓
+MongoDB Pod
+
+So the three variables have three different jobs:
+Variable	Purpose
+MONGO_DB_HOSTNAME	Where MongoDB is located
+MONGO_DB_USERNAME	Username to authenticate with
+MONGO_DB_PASSWORD	Password to authenticate with
+
+
+So the key relationship is:
+MongoDB container creates the credentials → Spring Boot receives those credentials → Spring Boot uses mongosvc to find MongoDB → MongoDB authenticates Spring Boot using those credentials.
+
+
+here credential values are same but credential names are different for mongo and spring why
+The values are the same, but the variable names are different because they belong to two different applications/containers.
+Think of it as two people using different names for the same information.
+env:
+  - name: MONGO_INITDB_ROOT_USERNAME
+    value: devdb
+  - name: MONGO_INITDB_ROOT_PASSWORD
+    value: devdb@123
+These names are defined by the official MongoDB Docker image.
+You have:
+env:
+  - name: MONGO_DB_USERNAME
+    value: devdb
+
+  - name: MONGO_DB_PASSWORD
+    value: devdb@123
+
+These names are not MongoDB's initialization variables.
+They are names that your Spring Boot application has been programmed/configured to understand.
+For example, your Spring Boot application might have configuration such as:
+
+spring.data.mongodb.username=${MONGO_DB_USERNAME}
+spring.data.mongodb.password=${MONGO_DB_PASSWORD}
+spring.data.mongodb.host=${MONGO_DB_HOSTNAME}
+
+So Spring Boot understands:
+
+MONGO_DB_USERNAME → MongoDB username
+MONGO_DB_PASSWORD → MongoDB password
+MONGO_DB_HOSTNAME → MongoDB hostname
