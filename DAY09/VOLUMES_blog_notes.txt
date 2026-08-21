@@ -627,3 +627,37 @@ env:
   value: mongodb://devdb:devdb@123@mongosvc:27017
 Final One-Line Answer
 You know to use MONGO_DB_HOSTNAME only by checking application code or configuration — Kubernetes itself does NOT define it.
+
+
+
+
+
+                         Kubernetes Cluster
+                                │
+                ┌───────────────┴───────────────┐
+                │                               │
+                ▼                               ▼
+        springappsvc                       mongosvc
+        NodePort Service                  ClusterIP Service
+                │                               │
+                │ selector                     │ selector
+                │ app=springapp               │ app=mongodb
+                ▼                               ▼
+        ┌───────────────┐                 ┌───────────────┐
+        │ Spring Pod 1  │                 │ MongoDB Pod   │
+        ├───────────────┤                 │               │
+        │ Spring Pod 2  │                 │ port 27017    │
+        └───────────────┘                 └───────────────┘
+                │
+                │
+                │ MONGO_DB_HOSTNAME
+                │ = mongosvc
+                │
+                └──────────────────────────────►
+
+
+
+
+The application uses the Service name. The Service uses the selector.
+They work at different levels
+mongosvc is the address/name used by the Spring application to reach the Service, while app: mongodb is the label used by the Service to identify the MongoDB Pod.
