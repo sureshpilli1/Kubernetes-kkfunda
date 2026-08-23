@@ -290,6 +290,11 @@ service/mongosvc unchanged
 Now apply your updated configuration file (hostpath-vol.yaml):
 This redeploys MongoDB with a HostPath volume mounted to /data/db inside the container, mapping it to /mongobkp on the worker node.
 
+It means the name inside volumeMounts must be the same as the name of a volume defined under volumes.
+This is how Kubernetes knows which volume you want to mount into the container.
+volumeMounts.name is a reference to volumes.name. They must have the same name.
+
+
 4.4 Verify the Pod and Node Details
 Check which node your new MongoDB Pod is running on:
 kubectl get po -n test-ns -o wide
