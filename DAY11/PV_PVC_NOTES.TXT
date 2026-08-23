@@ -138,6 +138,23 @@ spec:
         persistentVolumeClaim:
           claimName: mongodb-pvc  
 
+
+
+- name: mongonfsvol
+This is the Pod volume name.
+You can choose this name yourself.
+It is used to connect this volumes entry with volumeMounts.
+persistentVolumeClaim:
+This tells Kubernetes:
+"The storage for this Pod volume should come from a PersistentVolumeClaim."
+It tells Kubernetes what type/source of volume you are using.
+emptyDir: {}
+would mean the volume comes from emptyDir.
+persistentVolumeClaim:
+means the volume comes from a PVC.
+
+
+
 Pod → PVC → PV → NFS → Folder
 Flow:
 Pod requests volume via PVC
