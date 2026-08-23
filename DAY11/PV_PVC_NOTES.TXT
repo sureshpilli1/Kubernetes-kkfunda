@@ -164,7 +164,8 @@ iSCSI
 Longhorn
 GlusterFS
 One uniform way: PVC.
-Applications don't need to learn a different storage configuration for every storage technology. They request storage through the standard Kubernetes PVC interface, while Kubernetes/storage administrators handle the underlying storage implementation.
+Applications don't need to learn a different storage configuration for every storage technology. 
+They request storage through the standard Kubernetes PVC interface, while Kubernetes/storage administrators handle the underlying storage implementation.
 
 6.4 Access Control
 PVC restricts:
