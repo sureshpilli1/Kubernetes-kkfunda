@@ -146,10 +146,13 @@ PV uses NFS backend
 NFS folder mounted into the Pod
 
 6. Why PV and PVC are mandatory even if we have NFS? (Deep Reasoning)
+
 6.1 Automation
 Pods get storage automatically – no manual mount commands.
+
 6.2 Dynamic Scheduling
 Pod may move to Node-1 → Node-3 → Node-5. PVC ensures volume follows pod automatically.
+
 6.3 Standard API
 Kubernetes supports:
 NFS
@@ -161,16 +164,20 @@ iSCSI
 Longhorn
 GlusterFS
 One uniform way: PVC.
+Applications don't need to learn a different storage configuration for every storage technology. They request storage through the standard Kubernetes PVC interface, while Kubernetes/storage administrators handle the underlying storage implementation.
+
 6.4 Access Control
 PVC restricts:
 How much storage to use
 Which pods can access
 What mode (RWX, RWO)
+
 6.5 Lifecycle Management
 PV knows:
 What to do when PVC is deleted
 Whether to delete backend data
 Whether to retain data
+
 6.6 Decoupling Developer vs Ops
 Ops team:
 Creates PV pointing to NFS
