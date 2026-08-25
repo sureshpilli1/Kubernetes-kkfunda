@@ -35,6 +35,53 @@ Real-world analogy
 Like:
 "Is the person alive? If not → call ambulance (restart)"
 
+
+You cannot simply write any path you want in path. The application must actually expose that path.
+path: /health doesn't create /health.
+It means:
+"Kubernetes, when checking this container, send an HTTP GET request to /health on port 8080."
+Your application must already provide that endpoint.
+Your Spring Boot application must have /health
+
+Suppose your Spring Boot application is running inside the container on:
+port: 8080
+and your application provides:
+GET /health
+So inside the Pod:
+http://localhost:8080/health
+should return a successful HTTP response, typically 200 OK.
+For example, your Spring Boot application could have:
+@GetMapping("/health")
+public String health() {
+    return "OK";
+}
+Now /health exists because you created it in your application.
+
+
+Where does /health come from?
+----------------------------
+There are two common possibilities.
+Option A — You create it yourself
+For example:
+@GetMapping("/health")
+public String health() {
+    return "OK";
+}
+Then:
+/health
+is your own endpoint.
+
+Option B — Spring Boot Actuator creates it
+If you use Spring Boot Actuator, it can provide health information through:
+/actuator/health
+Then Kubernetes can check:
+livenessProbe:
+  httpGet:
+    path: /actuator/health
+    port: 8080
+
+
+
 4. Readiness Probe
 This type of probe is used to detect if a container is ready to accept traffic. You can use this probe to manage which pods are used as backends for load balancing services. 
 If a pod is not ready,  then be removed from the list of load balancers.
@@ -56,6 +103,9 @@ Real-world analogy
 Like:
 "Are you ready to work?"
 If not → don’t assign tasks (no traffic)
+
+in both cases:
+The path is an endpoint provided by your application; Kubernetes only calls it.
 
 5. Key difference (VERY IMPORTANT)
 | Feature        | Liveness               | Readiness                  |
