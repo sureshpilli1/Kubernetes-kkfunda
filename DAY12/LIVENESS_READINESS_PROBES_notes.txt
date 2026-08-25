@@ -310,3 +310,11 @@ Final one-line explanation
 This config means:
 "After 30 seconds, check /health every 10 seconds on port 8080.
 If it fails repeatedly, restart the container."
+
+
+
+
+what is memory leak:
+A memory leak means a program keeps using computer memory (RAM) but doesn't release memory that it no longer needs.
+Over time, the application can consume more and more memory until it becomes slow or crashes.
+Memory that the application no longer needs remains allocated/unreachable, causing memory usage to grow over time.
