@@ -16,7 +16,8 @@ How does Amazon EKS work?
 1.Create an Amazon EKS cluster in the AWS Management Console or with the AWS CLI or one of the AWS SDKs.
 2.Launch managed or self-managed Amazon EC2 nodes, or deploy your workloads to AWS Fargate.
 3.When your cluster is ready, you can configure your favorite Kubernetes tools, such as kubectl, to communicate with your cluster.
-4.Deploy and manage workloads on your Amazon EKS cluster the same way that you would with any other Kubernetes environment. You can also view information about your workloads using the AWS Management Console.
+4.Deploy and manage workloads on your Amazon EKS cluster the same way that you would with any other Kubernetes environment. 
+You can also view information about your workloads using the AWS Management Console.
 Source: https://docs.aws.amazon.com/
 
 Agenda:
@@ -43,7 +44,8 @@ Now under Network Settings, Choose the default VPC with Auto-assign public IP in
 Press enter or click to view image in full size
 Rest of the settings we will keep them at default and go ahead and click on Launch Instance
 On the next screen you can see a success message after the successful creation of the EC2 instance, click on Connect to instance button:
-Open any SSH Client in your local machine, take the public IP of your EC2 Instance, and add the pem key and you will be able to access your EC2 machine in my case I am using MobaXterm on Windows:
+Open any SSH Client in your local machine, take the public IP of your EC2 Instance, 
+and add the pem key and you will be able to access your EC2 machine in my case I am using MobaXterm on Windows:
 Press enter or click to view image in full size
 Once we are logged into our EC2 machine we will check the version AWS CLI:
 
@@ -96,7 +98,8 @@ Go to your AWS console and search for IAM. Under Access management, Select Roles
 Press enter or click to view image in full size
 On the next screen, we will select the EC2 service and click on Next:
 Press enter or click to view image in full size
-As mentioned earlier we need to provide the IAM user access to EC2, Cloudformation, and IAM, however, for the sake of this demo, we will provide full Administrative Access to the User(which is recommended in real-world scenarios):
+As mentioned earlier we need to provide the IAM user access to EC2, Cloudformation, and IAM, however, for the sake of this demo, we will provide full Administrative 
+Access to the User(which is recommended in real-world scenarios):
 Press enter or click to view image in full size
 On the next page, provide the name of your role and finally click on Create Role to proceed:
 Press enter or click to view image in full size
