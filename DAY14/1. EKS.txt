@@ -137,3 +137,30 @@ Conclusion
 In this blog, we learned how to set up a Kubernetes cluster on an EC2 machine using kubectl and eksctl. We also learned how to delete all the resources in the cluster in one go.
 
 If this blog helped you in any way do let me know in the comments section and please follow and click the clap 👏 button below to show your support 😄
+
+
+
+
+NOTES FROM CHATGPT:
+
+In AWS/DevOps, "setting up a bootstrap image" usually means preparing a machine image so that when a new server starts, it automatically performs the initial setup required for that server.
+
+For example, when you create an EC2 instance, you may want it to automatically:
+EC2 starts
+   ↓
+Install Docker
+   ↓
+Install Git
+   ↓
+Install required packages
+   ↓
+Download application
+   ↓
+Start application
+
+You can put these commands in an EC2 user-data/bootstrap script.
+#!/bin/bash
+yum update -y
+yum install -y docker
+systemctl start docker
+systemctl enable docker
