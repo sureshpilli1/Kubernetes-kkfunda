@@ -120,3 +120,35 @@ POST /api/v1/namespaces/default/pods
 Meaning
 Method	Meaning
 POST	Create resource
+
+
+what is controller-manager:
+What is a controller in Kubernetes?
+A controller is a control loop that continuously checks the current state of the cluster and tries to make it match the desired state.
+
+
+                 Kubernetes Control Plane
+                         │
+                         ↓
+              kube-controller-manager
+                         │
+          ┌──────────────┼───────────────┐
+          ↓              ↓               ↓
+   Deployment        Node             Job
+   Controller      Controller       Controller
+          │              │               │
+          ↓              ↓               ↓
+       Pods             Nodes           Jobs
+
+Kubernetes has different controllers for different responsibilities.
+
+| Controller                | Main responsibility                                             |
+| ------------------------- | --------------------------------------------------------------- |
+| Deployment controller     | Manages Deployments/ReplicaSets and helps maintain desired Pods |
+| ReplicaSet controller     | Maintains the requested number of Pods                          |
+| Node controller           | Monitors nodes                                                  |
+| Job controller            | Ensures Jobs complete                                           |
+| CronJob controller        | Creates Jobs according to schedule                              |
+| EndpointSlice controller  | Maintains EndpointSlices for Services                           |
+| ServiceAccount controller | Manages ServiceAccounts                                         |
+| Namespace controller      | Handles namespace lifecycle                                     |
