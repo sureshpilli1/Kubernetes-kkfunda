@@ -440,3 +440,21 @@ Best suited for system-level tasks like monitoring, logging, or networking.
 Doesn’t run on master Nodes by default → you need tolerations to include them.
 
 Unlike Deployments, you don’t set replicas manually; the Pod count always equals the Node count.
+
+
+
+
+
+
+
+
+notes from chatgpt:
+
+With a typical kubeadm-created cluster, the main control-plane components are commonly Static Pods:
+/etc/kubernetes/manifests/
+│
+├── kube-apiserver.yaml
+├── kube-controller-manager.yaml
+├── kube-scheduler.yaml
+└── etcd.yaml
+kube-proxy is normally deployed as a DaemonSet, while kube-apiserver, kube-scheduler, kube-controller-manager, and etcd are commonly Static Pods in a kubeadm cluster.
