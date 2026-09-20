@@ -270,7 +270,6 @@ A volume definition contains:
 1. name (mandatory)
 name: myvolume
 A label used inside the Pod
-
 2. Volume source (very important)
 This tells Kubernetes:
 “Where does this storage come from?”
@@ -278,10 +277,8 @@ Examples:
 PVC (your case)
 persistentVolumeClaim:
   claimName: mongodb-pvc
-
 emptyDir (temporary storage):
 emptyDir: {}
-
 ConfigMap:
 configMap:
   name: my-config
@@ -301,11 +298,9 @@ What does a volumeMount contain?
 1. name (mandatory)
 name: myvolume
 Must match volume name
-
 2. mountPath (mandatory)
 mountPath: /data
 Where the storage appears inside container
-
 3. Optional fields (advanced)
 readOnly
 readOnly: true
@@ -318,20 +313,16 @@ volumeMounts:
 
 3. How they work together
 Think of it like 2 steps:
-
 Step 1: Define storage
 volumes:
 - name: myvolume
   persistentVolumeClaim:
     claimName: mongodb-pvc
-
 “I have storage ready”
-
 Step 2: Use storage
 volumeMounts:
 - name: myvolume
   mountPath: /data/db
-
  “Attach it here”
 
 4. Visual understanding
