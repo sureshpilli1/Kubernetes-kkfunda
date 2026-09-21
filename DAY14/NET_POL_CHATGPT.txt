@@ -108,11 +108,19 @@ spec:
 Meaning:
 No Pod can receive traffic 
 
+
+{} means "no restriction specified
+
+We are going to control incoming traffic to these Pods.
+But there is no ingress: allow rule.
+Therefore, ingress becomes denied.
+
 9. Example 3: Allow all (explicit)
 ingress:
 - {}
 Means:
 Allow all traffic
+This ingress rule has no restrictions on the source or port.
 
 10. Egress example (important)
 Allow MongoDB to access DNS only
@@ -821,3 +829,72 @@ NOTE: add nameSpace slector and check the connection
 	matchLabels:
 	 ns=test-ns
 
+
+
+
+
+
+One sentence to remember
+Explicit deny = "I specifically said NO."
+
+Implicit deny = "I didn't say YES, so it is denied."
+
+And for Kubernetes NetworkPolicy, the most important idea is:
+NetworkPolicy is primarily an allow-list model. You define what traffic is allowed; traffic not allowed by the applicable policy is denied.
+
+
+Explicit deny:
+-------------
+Explicit deny means:
+You specifically write a rule saying this traffic should be denied.
+For example, in some firewall systems you might see something conceptually like:
+ALLOW  10.0.0.0/24
+DENY   10.0.1.0/24
+The second rule explicitly says:
+Block traffic from 10.0.1.0/24.
+So the administrator has written a deny rule.
+
+Implicit deny:
+-------------
+Implicit deny means:
+You didn't specifically write a DENY rule, but traffic is denied because there is no rule allowing it.
+For example:
+ALLOW:
+10.0.0.0/24
+Suppose traffic comes from:
+10.0.1.50
+There is no rule saying:
+DENY 10.0.1.50
+But it is still denied because it doesn't match the allowed rule.
+That's implicit deny.
+
+
+
+Explicit allow:
+---------------
+You specifically write a rule saying:
+Allow this traffic.
+
+For example, in your NetworkPolicy:
+ingress:
+- from:
+  - podSelector:
+      matchLabels:
+        role: frontend
+This is an explicit allow.
+It explicitly allows matching frontend Pods to send traffic to the selected Pod, subject to the other conditions such as the port.
+
+2. Implicit allow:
+-----------------
+An implicit allow means:
+Traffic is allowed because no rule has restricted it.
+
+This is common in systems where default behavior is allow.
+For example, imagine a firewall with no rules:
+No firewall restrictions
+        ↓
+Traffic is allowed
+You didn't write:
+ALLOW traffic
+but traffic is allowed by default.
+That is often called implicit allow or default allow.
