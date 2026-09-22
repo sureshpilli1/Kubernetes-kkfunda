@@ -486,173 +486,662 @@ NOTE: pls change the cluster name and apply.
 explaination:
 
 
-You’ve put together a complete picture: resource requests/limits + Cluster Autoscaler setup. 
-The confusion you mentioned (“no new nodes even after increasing resources”) is actually the key concept here. Let’s go step by step and connect everything clearly.
 
-1. First: Requests vs Limits (VERY IMPORTANT for autoscaling)
-From your Deployment:
+
+Step 1 — Create IAM policy
+Your policy starts with:
+{
+  "Version": "2012-10-17",
+  "Statement": [...]
+}
+This is an AWS IAM policy.
+It tells AWS:
+"What AWS API operations is this identity allowed to perform?"
+
+First statement — read/inspect AWS resources
+You have:
+"Effect": "Allow",
+"Action": [
+  "autoscaling:DescribeAutoScalingGroups",
+  "autoscaling:DescribeAutoScalingInstances",
+  "autoscaling:DescribeLaunchConfigurations",
+  "autoscaling:DescribeScalingActivities",
+  "ec2:DescribeImages",
+  "ec2:DescribeInstanceTypes",
+  "ec2:DescribeLaunchTemplateVersions",
+  "ec2:GetInstanceTypesFromInstanceRequirements",
+  "eks:DescribeNodegroup"
+],
+"Resource": ["*"]
+Think of these as:
+"Cluster Autoscaler is allowed to LOOK at AWS information."
+
+For example:
+autoscaling:DescribeAutoScalingGroups
+Cluster Autoscaler needs to know:
+What Auto Scaling Groups exist?
+What is their desired size?
+What is their minimum?
+What is their maximum?
+autoscaling:DescribeAutoScalingInstances
+It can ask:
+Which EC2 instances belong to which Auto Scaling Group?
+
+autoscaling:DescribeScalingActivities
+It can check:
+What scaling activities have happened?
+
+For example:
+ASG increased:
+2 → 3 instances
+ec2:DescribeImages
+It can inspect EC2 AMIs.
+ec2:DescribeInstanceTypes
+It can find information about instance types such as:
+t3.medium
+t3.large
+m5.large
+including their resources.
+ec2:DescribeLaunchTemplateVersions
+It can inspect launch template versions used by node groups.
+eks:DescribeNodegroup
+It can inspect EKS node group information.
+Why are these called Describe?
+Because they are primarily read/inspection operations.
+Think:
+Describe = LOOK
+The first statement essentially gives Cluster Autoscaler permission to:
+LOOK at AWS resources
+4. Second statement — actually change capacity
+Now look at:
+"Effect": "Allow",
+"Action": [
+  "autoscaling:SetDesiredCapacity",
+  "autoscaling:TerminateInstanceInAutoScalingGroup"
+],
+"Resource": ["*"]
+This is different.
+These permissions allow Cluster Autoscaler to change the Auto Scaling Group.
+SetDesiredCapacity
+Suppose:
+ASG desired capacity = 2
+Cluster Autoscaler decides another node is required.
+It can effectively request:
+desired capacity:
+2 → 3
+AWS Auto Scaling then launches another EC2 instance.
+TerminateInstanceInAutoScalingGroup
+This is used when Cluster Autoscaler needs to scale down.
+For example:
+Node1
+Node2
+Node3
+If Node3 is no longer needed, Cluster Autoscaler can initiate removal of an instance from the Auto Scaling Group.
+So:
+Scale UP
+2 nodes → 3 nodes
+        ↑
+SetDesiredCapacity
+
+Scale DOWN
+3 nodes → 2 nodes
+        ↑
+TerminateInstanceInAutoScalingGroup
+5. Why does Cluster Autoscaler need IAM?
+Because Cluster Autoscaler is running inside Kubernetes, but it needs to control AWS resources.
+There are two different permission systems involved:
+Kubernetes permissions
+        +
+AWS permissions
+Kubernetes RBAC
+Controls:
+What can Cluster Autoscaler do inside Kubernetes?
+
+AWS IAM
+Controls:
+What can Cluster Autoscaler do in AWS?
+
+This is why your setup contains both:
+Kubernetes RBAC YAML
+and:
+AWS IAM Policy
+Step 2 — Attach IAM policy
+Your instructions say:
+Attach the policy to the EKS cluster IAM role.
+
+Conceptually:
+IAM Policy
+ClusterAutoScalerPolicy
+        │
+        ↓
+EKS IAM Role
+        │
+        ↓
+AWS permissions
+The policy gives permissions such as:
+Describe ASGs
+Describe EC2
+Set desired capacity
+Terminate ASG instance
+But there is an important modern-EKS point here
+The Cluster Autoscaler Pod needs AWS permissions. AWS now supports IRSA and EKS Pod Identity specifically for giving Kubernetes workloads fine-grained IAM permissions. AWS documents these as mechanisms for granting IAM permissions to workloads, and recommends scoping roles to the specific service account when using IRSA. AWS Documentation
+So I would not blindly follow the old instruction of attaching this policy to the EKS cluster role for a new production setup.
+For learning, however, the important conceptual point is:
+Cluster Autoscaler
+       ↓
+needs AWS API access
+       ↓
+IAM permissions
+       ↓
+AWS Auto Scaling
+Step 3 — Install Cluster Autoscaler
+Now we move from AWS to Kubernetes.
+You run:
+kubectl apply -f examples/cluster-autoscaler-autodiscover.yaml
+This YAML creates several Kubernetes objects.
+Let's go through them one by one.
+6. ServiceAccount
+kind: ServiceAccount
+metadata:
+  name: cluster-autoscaler
+  namespace: kube-system
+A ServiceAccount is an identity for a Pod inside Kubernetes.
+Think:
+Human user
+    ↓
+IAM user/role
+
+Pod
+    ↓
+Kubernetes ServiceAccount
+Your Cluster Autoscaler Pod will use:
+ServiceAccount:
+cluster-autoscaler
+7. ClusterRole
+Next:
+kind: ClusterRole
+metadata:
+  name: cluster-autoscaler
+This defines:
+What Kubernetes resources can Cluster Autoscaler access and what operations can it perform?
+
+For example:
+resources: ["nodes"]
+verbs: ["watch", "list", "get", "update"]
+It can:
+get
+list
+watch
+update
+Nodes.
+8. What are resources and verbs?
+This is important.
+Suppose you see:
 resources:
-  requests:
-    memory: "512Mi"
-    cpu: "1"
-  limits:
-    memory: "1Gi"
-    cpu: "1"
-What Kubernetes uses for scheduling?
-ONLY requests are used for scheduling
-Scheduler decision = based on requests
-NOT limits
-Meaning
-requests → minimum guaranteed resources
-limits → max container can use
-Why autoscaler didn’t trigger?
-You wrote:
-“increase the resources and no new nodes are coming”
-Possible reasons:
-Case 1: Requests still fit in existing node
-Example:
-Node capacity = 4 CPU
-Your pod request = 1 CPU
-2 replicas → total = 2 CPU
-Still fits → NO scaling
-Case 2: Only limits increased
-limits:
-  cpu: 4
-But requests still:
-requests:
-  cpu: 1
-Scheduler sees only 1 CPU → no scaling
-Correct way to trigger autoscaler
-Increase requests, not just limits
-Example:
-requests:
-  cpu: 3
-  memory: 2Gi
+- nodes
+
+verbs:
+- get
+- list
+- watch
+It means:
+Cluster Autoscaler can GET, LIST and WATCH Kubernetes Nodes.
+
+Resource
+nodes
+pods
+services
+deployments
+persistentvolumeclaims
+Verb
+get
+list
+watch
+create
+update
+patch
+delete
+Think:
+RESOURCE = WHAT?
+
+VERB = WHAT CAN I DO?
+9. Why does Cluster Autoscaler need Pods?
+You have:
+resources:
+- namespaces
+- pods
+- services
+- replicationcontrollers
+- persistentvolumeclaims
+- persistentvolumes
+
+verbs:
+- watch
+- list
+- get
+Why?
+Because Cluster Autoscaler needs to understand the state of the cluster.
+For example:
+Are Pods pending?
+
+Why are they pending?
+
+Can they fit on existing nodes?
+
+Would another node help?
+It needs information about Pods, nodes, workloads, storage, etc.
+10. Why does it need pods/eviction?
+You have:
+resources:
+- pods/eviction
+verbs:
+- create
+This is related to safely evicting Pods when scaling down a node.
+For example:
+Node3
+ ├── Pod A
+ ├── Pod B
+ └── Pod C
+If Cluster Autoscaler wants to remove Node3, it cannot simply disappear without considering the Pods.
+It can use Kubernetes eviction mechanisms so workloads can be rescheduled appropriately.
+11. ClusterRoleBinding
 Now:
-Pod cannot fit → becomes Pending → Autoscaler triggers
-
-2. Cluster Autoscaler concept (connected to your example)
-If Pod = Pending (unschedulable)
-→ Cluster Autoscaler adds node
-Full flow
-1. Pod created
-2. Scheduler tries to place it
-3. Not enough resources ❌
-4. Pod = Pending
-5. Autoscaler detects it
-6. ASG scaled up
-7. New node created
-8. Pod scheduled ✔
-
-3. Your AWS Setup Explained
-Step 1: IAM Policy
-You created:
-autoscaling:SetDesiredCapacity
-autoscaling:TerminateInstanceInAutoScalingGroup
-Meaning:
-“Allow autoscaler to increase/decrease EC2 instances”
-Why needed?
-Cluster Autoscaler must:
-Increase node count
-Terminate nodes
-Step 2: Attach policy to EKS role
-You attached policy to:
-EKS Cluster IAM Role
-Better practice:
-Use IRSA (IAM Role for ServiceAccount)
-But your method still works for learning
-
-4. Step 3: Deploy Cluster Autoscaler
-ServiceAccount
-name: cluster-autoscaler
-namespace: kube-system
-Identity for autoscaler pod
+kind: ClusterRoleBinding
+This is the connection between:
 ClusterRole
-This big block:
-resources: ["pods", "nodes", "pv", "pvc", ...]
-Autoscaler needs to:
-Watch pods
-Check node usage
-Evict pods
-Read cluster state
-ClusterRoleBinding
+and:
+ServiceAccount
+You have:
+roleRef:
+  kind: ClusterRole
+  name: cluster-autoscaler
+
 subjects:
-  - kind: ServiceAccount
-Connects:
-ServiceAccount → Permissions
-Deployment (MAIN PART)
-Image
+- kind: ServiceAccount
+  name: cluster-autoscaler
+  namespace: kube-system
+Meaning:
+ClusterRole
+cluster-autoscaler
+       │
+       │ gives permissions to
+       ↓
+ServiceAccount
+cluster-autoscaler
+       │
+       ↓
+Cluster Autoscaler Pod
+Without the binding, simply creating the ClusterRole doesn't give the ServiceAccount those permissions.
+12. Role and RoleBinding
+You also have:
+kind: Role
+namespace: kube-system
+and:
+kind: RoleBinding
+namespace: kube-system
+Why both ClusterRole and Role?
+Because Kubernetes has two scopes.
+ClusterRole
+Cluster-wide permissions.
+For example:
+Nodes
+Pods
+Namespaces
+PV
+StorageClass
+Role
+Permissions within a particular namespace.
+Here:
+kube-system
+The Role allows access to ConfigMaps:
+resources:
+- configmaps
+So:
+ClusterRole
+    ↓
+cluster-wide resources
+
+Role
+    ↓
+kube-system namespace resources
+13. Finally, the Deployment
+This is the most important part.
+kind: Deployment
+metadata:
+  name: cluster-autoscaler
+  namespace: kube-system
+This actually creates the Cluster Autoscaler Pod.
+You have:
+replicas: 1
+So:
+Deployment
+     ↓
+1 Cluster Autoscaler Pod
+14. Which image is being used?
 image: registry.k8s.io/autoscaling/cluster-autoscaler:v1.26.2
-Actual autoscaler software
-Important arguments
---cloud-provider=aws
-Tells autoscaler:
-Use AWS APIs
---node-group-auto-discovery
-asg:tag=k8s.io/cluster-autoscaler/enabled,
+This is the Cluster Autoscaler application.
+When the Pod starts, this executable runs:
+./cluster-autoscaler
+Again, v1.26.2 is from the old example you pasted; use a version compatible with your EKS/Kubernetes version rather than copying it blindly. The current upstream example uses a newer image. GitHub
+15. --cloud-provider=aws
+- --cloud-provider=aws
+This tells Cluster Autoscaler:
+"I am running against AWS."
+
+Therefore it knows that it should interact with:
+AWS Auto Scaling
+EC2
+EKS
+16. The most important line: auto-discovery
+This line:
+- --node-group-auto-discovery=asg:tag=k8s.io/cluster-autoscaler/enabled,k8s.io/cluster-autoscaler/my-demo-cluster
+is extremely important.
+It tells Cluster Autoscaler:
+Find the AWS Auto Scaling Groups that have these tags.
+
+The two tags are:
+k8s.io/cluster-autoscaler/enabled
+and:
 k8s.io/cluster-autoscaler/my-demo-cluster
-VERY IMPORTANT
-Autoscaler finds ASGs using tags:
-Required ASG tags:
+AWS's Cluster Autoscaler documentation describes this auto-discovery approach: the ASGs must have the required tags so the autoscaler can discover the node groups. GitHub
+17. What does this mean in practice?
+Suppose your EKS cluster is:
+my-demo-cluster
+and your worker node ASG has:
+Tag:
+k8s.io/cluster-autoscaler/enabled = true
+
+Tag:
+k8s.io/cluster-autoscaler/my-demo-cluster = owned
+Then:
+Cluster Autoscaler
+       │
+       │ looks for these tags
+       ↓
+AWS Auto Scaling Groups
+       │
+       ├── ASG-1 ✅
+       ├── ASG-2 ❌
+       └── ASG-3 ❌
+It discovers ASG-1 as a node group that it can manage.
+eksctl can add these tags when creating node groups with autoscaling access enabled. AWS Documentation
+18. --expander=least-waste
+- --expander=least-waste
+Suppose two node groups could potentially accommodate pending Pods:
+Node Group A → t3.medium
+Node Group B → t3.large
+The least-waste expander uses a strategy intended to minimize unused capacity after scaling. The exact choice can matter when multiple node groups are eligible.
+For now, don't worry too much about this option.
+19. Resource requests and limits
+You have:
+resources:
+  limits:
+    cpu: 100m
+    memory: 600Mi
+  requests:
+    cpu: 100m
+    memory: 600Mi
+This is Kubernetes resource management.
+100m CPU
+means approximately:
+0.1 CPU core
+and:
+600Mi
+means approximately 600 MiB memory.
+So the Cluster Autoscaler Pod requests:
+CPU:    0.1 core
+Memory: 600 MiB
+20. Why priorityClassName?
+priorityClassName: system-cluster-critical
+This gives the Cluster Autoscaler Pod a high scheduling priority.
+Why?
+Because Cluster Autoscaler is an important component for cluster operation.
+You don't want a situation where:
+Cluster is full
+      ↓
+Cluster Autoscaler itself cannot run
+      ↓
+It cannot add nodes
+      ↓
+Cluster cannot recover easily
+So it receives high priority.
+21. serviceAccountName
+This connects the Deployment to the ServiceAccount:
+serviceAccountName: cluster-autoscaler
+So:
+Deployment
+     ↓
+Pod
+     ↓
+serviceAccountName:
+cluster-autoscaler
+     ↓
+ServiceAccount
+     ↓
+ClusterRoleBinding
+     ↓
+ClusterRole permissions
+This is the Kubernetes RBAC side.
+For AWS access, modern EKS setups should additionally associate the ServiceAccount with an IAM role using IRSA or EKS Pod Identity rather than broadly relying on a cluster role. AWS Documentation
+22. Security settings
+You have:
+runAsNonRoot: true
+runAsUser: 65534
+This means:
+Don't run the application as Linux root.
+
+65534 is commonly used for a non-root user such as nobody.
+Then:
+allowPrivilegeEscalation: false
+means:
+Don't allow the container to gain additional privileges.
+
+And:
+capabilities:
+  drop:
+  - ALL
+means:
+Drop Linux capabilities.
+
+And:
+readOnlyRootFilesystem: true
+means:
+The container's root filesystem should be read-only.
+
+These are security-hardening measures.
+23. Why mount SSL certificates?
+At the bottom:
+volumes:
+- name: ssl-certs
+  hostPath:
+    path: /etc/ssl/certs/ca-bundle.crt
+And:
+volumeMounts:
+- name: ssl-certs
+  mountPath: /etc/ssl/certs/ca-certificates.crt
+  readOnly: true
+Cluster Autoscaler needs to communicate securely with AWS APIs.
+HTTPS connections require trusted CA certificates.
+So the container gets the node's CA certificate bundle.
+Think:
+EC2 node
+   │
+   │ CA certificates
+   ↓
+Cluster Autoscaler container
+   │
+   │ HTTPS
+   ↓
+AWS APIs
+24. Put everything together
+Now the entire setup becomes much easier:
+                    EKS CLUSTER
+                         │
+                         │
+               ┌─────────▼─────────┐
+               │ Cluster Autoscaler│
+               │       Pod         │
+               └─────────┬─────────┘
+                         │
+              Kubernetes │ API
+                         │
+              ┌──────────▼──────────┐
+              │ Kubernetes RBAC     │
+              │                     │
+              │ ServiceAccount      │
+              │       ↓             │
+              │ ClusterRole         │
+              │       ↓             │
+              │ ClusterRoleBinding  │
+              └─────────────────────┘
+                         │
+                         │ AWS API
+                         │
+              ┌──────────▼──────────┐
+              │       AWS IAM       │
+              │                     │
+              │ Describe resources  │
+              │ SetDesiredCapacity  │
+              │ Terminate instance  │
+              └──────────┬──────────┘
+                         │
+                         ▼
+                AWS Auto Scaling Group
+                         │
+                ┌────────┴────────┐
+                │                 │
+              EC2 Node          EC2 Node
+                │                 │
+                └────────┬────────┘
+                         │
+                    Kubernetes Pods
+25. The actual scale-up process
+This is the most important flow to understand.
+Imagine:
+Node1     Node2
+  │         │
+  └────┬────┘
+       │
+    Pods running
+Now you deploy more Pods:
+Pod1 Pod2 Pod3 Pod4 Pod5
+Suppose there isn't enough CPU.
+Scheduler says:
+Pod5
+  ↓
+Pending
+  ↓
+Insufficient CPU
+Cluster Autoscaler notices:
+Pending Pod
+     ↓
+Existing nodes cannot accommodate it
+Then:
+Cluster Autoscaler
+        ↓
+Find matching ASG
+        ↓
+AWS Auto Scaling API
+        ↓
+Desired capacity:
+2 → 3
+        ↓
+AWS launches EC2
+        ↓
+EC2 joins EKS
+        ↓
+New Kubernetes Node
+        ↓
+Scheduler places Pod5
+26. Scale-down process
+The reverse can happen.
+Node1   Node2   Node3
+Suppose Node3 is mostly empty.
+Cluster Autoscaler determines that workloads can run on fewer nodes.
+Then:
+Cluster Autoscaler
+       ↓
+Choose removable node
+       ↓
+Evict/reschedule Pods appropriately
+       ↓
+AWS Auto Scaling
+       ↓
+Terminate instance
+Result:
+Node1   Node2
+27. One thing missing from your instructions
+For auto-discovery to work, your worker-node Auto Scaling Group must have the required tags.
+For cluster name my-demo-cluster, typically:
 k8s.io/cluster-autoscaler/enabled = true
 k8s.io/cluster-autoscaler/my-demo-cluster = owned
-If missing → autoscaler won’t work ❌
---expander=least-waste
-Chooses best node group:
-Minimizes unused resources
---skip-nodes-with-local-storage=false
-Allows scaling down even if local storage exists
+The exact values can vary; the current Cluster Autoscaler documentation says the required tag keys are what discovery looks for unless values are explicitly specified. GitHub
+So your setup is really:
+1. IAM
+   ↓
+AWS permission
 
-5. How your example should behave
-Scenario 1: Current config
-requests:
-  cpu: 1
-replicas: 2
-Total = 2 CPU
-If node has 4 CPU → no scaling
-Scenario 2: Increase requests
-requests:
-  cpu: 3
-replicas: 2
-Total = 6 CPU
-If node has 4 CPU:
-1 pod fits
-1 pod Pending → Autoscaler triggers ✔
+2. Kubernetes RBAC
+   ↓
+Kubernetes permission
 
-6. Why nodes are not coming (root cause summary)
-Most common reasons:
-1. Requests too small
-Autoscaler never triggers
-2. ASG tags missing
-Autoscaler cannot discover node group
-3. IAM permission issue
-Autoscaler cannot scale ASG
-4. No Pending pods
-Autoscaler only reacts to Pending pods
-5. Max size reached
-ASG already at max capacity
+3. ServiceAccount / AWS Pod identity
+   ↓
+Connect workload identity to AWS permissions
 
-7. How to verify (VERY IMPORTANT)
-Check pending pods
-kubectl get pods
-Look for:
-Pending
-Check autoscaler logs
-kubectl logs -n kube-system deployment/cluster-autoscaler
-Check nodes
-kubectl get nodes -w
-Check ASG
-In AWS console:
-Min / Max / Desired
+4. Cluster Autoscaler Deployment
+   ↓
+Run autoscaler program
 
-8. Real-world mental model
-Requests = trigger
-Autoscaler = decision maker
-ASG = executor
-Final summary
-Autoscaler works ONLY when:
-Pod is Pending
-Due to insufficient resources
-Important:
-Requests → triggers autoscaling
-Limits → do NOT trigger autoscaling
+5. ASG tags
+   ↓
+Tell autoscaler which node groups to manage
+
+6. Pending Pods
+   ↓
+Autoscaler increases node count
+The three most important things to remember
+IAM policy → What can Cluster Autoscaler do in AWS?
+ClusterRole/RBAC → What can Cluster Autoscaler do inside Kubernetes?
+Deployment → Actually runs the Cluster Autoscaler program.
+And the most important relationship is:
+Cluster Autoscaler
+       │
+       ├── Kubernetes API
+       │       ↓
+       │    understand Pods/Nodes
+       │
+       └── AWS API
+               ↓
+          change ASG size
+               ↓
+          add/remove EC2 nodes
+One final caution: don't use the pasted v1.26.2 image just because it appears in a tutorial. Match the Cluster Autoscaler version to your Kubernetes/EKS version and use the current upstream/AWS instructions. The upstream example has moved on to newer versions. GitHub
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Meet Codex in the desktop app
+
+A coding agent that helps you build and ship with AI, included for free in your ChatGPT plan.
