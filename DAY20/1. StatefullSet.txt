@@ -212,6 +212,9 @@ Headless service DNS returns:
 10.0.0.3
 instead of single ClusterIP.
 
+Normal Service gives clients a stable virtual IP and hides the individual Pods;
+a headless Service has no virtual IP and lets DNS expose the individual Pod endpoints, which is particularly useful for StatefulSets and clustered/stateful applications.
+
 Why is this useful?
 Some applications need:
 Direct communication with specific pods
