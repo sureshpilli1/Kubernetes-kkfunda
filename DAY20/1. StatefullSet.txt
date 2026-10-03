@@ -215,6 +215,85 @@ instead of single ClusterIP.
 Normal Service gives clients a stable virtual IP and hides the individual Pods;
 a headless Service has no virtual IP and lets DNS expose the individual Pod endpoints, which is particularly useful for StatefulSets and clustered/stateful applications.
 
+Normal vs Headless
+This is the key difference:
+Normal Service
+Service
+   │
+   ↓
+ClusterIP
+   │
+   ├──→ Pod-1
+   ├──→ Pod-2
+   └──→ Pod-3
+
+Headless Service
+Service
+   │
+   │ no ClusterIP
+   ↓
+DNS
+   │
+   ├──→ Pod-1 IP
+   ├──→ Pod-2 IP
+   └──→ Pod-3 IP
+
+So:
+Normal Service gives you a virtual IP.
+
+Headless Service gives DNS information about the individual Pods.
+
+Let's see DNS behavior
+Suppose we have:
+Service:
+mongodb
+
+and three MongoDB Pods:
+Mongo-0 → 10.1.1.10
+Mongo-1 → 10.1.1.11
+Mongo-2 → 10.1.1.12
+
+Normal Service
+DNS:
+mongodb.prod.svc.cluster.local
+
+might resolve to:
+10.96.100.50
+
+That is the Service ClusterIP.
+The application doesn't directly see the individual Pod IPs through that Service name.
+Headless Service
+With:
+clusterIP: None
+
+DNS:
+mongodb.prod.svc.cluster.local
+
+can return the Pod IPs:
+10.1.1.10
+10.1.1.11
+10.1.1.12
+
+So the client can discover the individual Pods.
+
+Why would we want individual Pod IPs?
+This is especially useful for Stateful applications.
+For example:
+MongoDB
+Redis
+Kafka
+ZooKeeper
+Elasticsearch
+
+Sometimes the application needs to know:
+"Which specific instance am I connecting to?"
+rather than:
+"Give me any available instance."
+
+
+
+
+
 Why is this useful?
 Some applications need:
 Direct communication with specific pods
